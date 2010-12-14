@@ -1,0 +1,7 @@
+To make a jar you can do:
+
+ant jar
+
+To make a Hadoop MapReduce job jar with no defined main class in the manifest:
+
+ant job-jar
