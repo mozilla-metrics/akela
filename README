@@ -4,4 +4,7 @@ ant jar
 
 To make a Hadoop MapReduce job jar with no defined main class in the manifest:
 
-ant job-jar
+ant hadoop-jar
+
+
+All aspects of this software are distributed under Apache Software License 2.0.
