@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-package com.mozilla.pig.eval;
+package com.mozilla.pig.eval.date;
 
 import java.io.IOException;
 import java.text.ParseException;

@@ -17,26 +17,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.mozilla.pig.eval;
+ 
+package com.mozilla.pig.eval.json;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
+import java.util.Map;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 
-public class FormatDate extends EvalFunc<String> {
+public class JsonMap extends EvalFunc<Map<String, Object>> {
+
+	public static enum ERRORS { JSONParseError, JSONMappingError };
 	
-	@Override
-	public String exec(Tuple input) throws IOException {
+	private final ObjectMapper jsonMapper = new ObjectMapper();
+	
+	public Map<String, Object> exec(Tuple input) throws IOException {
 		if (input == null || input.size() == 0) {
 			return null;
 		}
+
+		try {
+			reporter.progress();
+			Map<String,Object> values = jsonMapper.readValue((String)input.get(0), new TypeReference<Map<String,Object>>() { });
+			return values;
+		} catch(JsonParseException e) {
+			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
+		} catch(JsonMappingException e) {
+			pigLogger.warn(this, "JSON Mapping Error", ERRORS.JSONMappingError);
+		}
 		
-		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(0));
-		
-		return outputSdf.format((Long)input.get(1));
+		return null;
 	}
-	
+
 }

@@ -23,10 +23,12 @@ package com.mozilla.hadoop;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,7 +48,20 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.mozilla.util.DateUtil;
 
+
+/**
+ * Backup is a distcp alternative.  It was created specifically for copying HBase table directories while
+ * the source cluster may still be running.  Backup tends to be more immune to errors than distcp when running
+ * in this type of scenario as it favors swallowing exceptions and incrementing counters as opposed to failing.
+ * 
+ * The MapReduce output is used to list files that have failed so that list could be used for investigation purposes
+ * and potentially distcp at a later time.
+ * 
+ * @author Xavier Stevens
+ *
+ */
 public class Backup implements Tool {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Backup.class);
@@ -57,6 +72,8 @@ public class Backup implements Tool {
 	
 	public static class BackupMapper extends Mapper<LongWritable, Text, Text, Text> {
 
+		public enum ReportStats { DIRECTORY_GET_PATHS_FAILED, SUCCESS, COPY_FILE_FNF_FAILURE, COPY_FILE_FAILED, NOT_MODIFIED };
+		
 		private FileSystem inputFs;
 		private FileSystem outputFs;
 		private String outputRootPath;
@@ -101,40 +118,57 @@ public class Backup implements Tool {
 			}
 		}
 		
-		/* (non-Javadoc)
-		 * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+		/**
+		 * Copy the file at inputPath to the destination cluster using the same directory structure
+		 * @param inputPath
+		 * @param context
+		 * @throws InterruptedException
+		 * @throws IOException
 		 */
-		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
-			System.out.println("Received: " + value.toString());
-			
+		private void copyFile(Path inputPath, Context context) throws InterruptedException, IOException {
 			DataInputStream dis = null;
 			DataOutputStream dos = null;
-			try {		
-				String commonPath = null;
-				Matcher m = filePattern.matcher(value.toString());
-				if (m.find()) {
-					if (m.groupCount() == 1) {
-						commonPath = m.group(1);
-					}
-				} else {
-					throw new RuntimeException("Regex match on common path failed");
-				}
 			
+			String commonPath = null;
+			Matcher m = filePattern.matcher(inputPath.toString());
+			if (m.find()) {
+				if (m.groupCount() == 1) {
+					commonPath = m.group(1);
+				}
+			} else {
+				throw new RuntimeException("Regex match on common path failed");
+			}
+			
+			try {		
 				Path fullOutputPath = new Path(outputRootPath + commonPath);
 				outputFs.mkdirs(fullOutputPath.getParent());
-
-				dis = inputFs.open(new Path(value.toString()));
-				
-//				if (commonPath.endsWith(".gz")) {
-//					dos = new GZIPOutputStream(new FileOutputStream(outputFile));
-//				} else {
+				if (outputFs.exists(fullOutputPath) && inputFs.getFileStatus(inputPath).getLen() == outputFs.getFileStatus(fullOutputPath).getLen()) {
+					context.getCounter(ReportStats.NOT_MODIFIED).increment(1L);
+				} else {
+					dis = inputFs.open(inputPath);
 					dos = outputFs.create(fullOutputPath, true);
-//				}
-				byte[] buffer = new byte[32768];
-				int bytesRead = 0;
-				while ((bytesRead = dis.read(buffer)) > 0) {
-					dos.write(buffer, 0, bytesRead);
+
+					byte[] buffer = new byte[32768];
+					int bytesRead = 0;
+					int writeCount = 0;
+					while ((bytesRead = dis.read(buffer)) > 0) {
+						dos.write(buffer, 0, bytesRead);
+						if (writeCount % 100 == 0) {
+							context.progress();
+							writeCount = 0;
+						}
+						writeCount++;
+					}
 				}
+				
+				context.getCounter(ReportStats.SUCCESS).increment(1L);
+			} catch (FileNotFoundException e) {
+				LOG.error("Source file is missing", e);
+				context.getCounter(ReportStats.COPY_FILE_FNF_FAILURE).increment(1L);
+			} catch (Exception e) {
+				LOG.error("Error copying file", e);
+				context.getCounter(ReportStats.COPY_FILE_FAILED).increment(1L);
+				context.write(new Text(inputPath.toString()), new Text(""));
 			} finally {
 				if (dis != null) {
 					dis.close();
@@ -143,45 +177,96 @@ public class Backup implements Tool {
 					dos.close();
 				}
 			}
+		}
+		
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+		 */
+		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
+			System.out.println("Received: " + value.toString());
 			
-			context.write(new Text(key.toString()), new Text(""));
+			Path inputPath = new Path(value.toString());
+			List<Path> inputPaths = null;
+			try {
+				inputPaths = Backup.getAllPaths(inputFs, inputPath, DateUtil.getTimeAtResolution(System.currentTimeMillis(), Calendar.DATE));
+			} catch (Exception e) {
+				LOG.error("Directory getPaths failed", e);
+				context.getCounter(ReportStats.DIRECTORY_GET_PATHS_FAILED).increment(1L);
+				context.write(new Text(value.toString()), new Text(""));
+				return;
+			}
+			if (inputPaths != null && inputPaths.size() > 0) {
+				for (Path p : inputPaths) {
+					copyFile(p, context);
+				}
+			}
 		}
 		
 	}	
 
-	public List<Path> getPaths(FileSystem fs, Path inputPath) throws IOException {
+	/**
+	 * Get only the first level of paths
+	 * @param fs
+	 * @param inputPath
+	 * @param endTimeMillis
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Path> getPaths(FileSystem fs, Path inputPath, long endTimeMillis) throws IOException {
 		List<Path> retPaths = new ArrayList<Path>();
-		for (FileStatus status : fs.listStatus(inputPath)) {
-			if (status.isDir()) {
-				retPaths.addAll(getPaths(fs, status.getPath()));
-			} else {
-				retPaths.add(status.getPath());
+		try {
+			for (FileStatus status : fs.listStatus(inputPath)) {
+				if (status.getModificationTime() < endTimeMillis) {
+					retPaths.add(status.getPath());
+				}
 			}
+		} catch (IOException e) {
+			LOG.error("Exception in getPaths for inputPath: " + inputPath.toString());
+		}
+		
+		return retPaths;
+	}
+	
+	
+	/**
+	 * Walk recursively to get all file paths
+	 * @param fs
+	 * @param inputPath
+	 * @param endTimeMillis
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Path> getAllPaths(FileSystem fs, Path inputPath, long endTimeMillis) throws IOException {
+		List<Path> retPaths = new ArrayList<Path>();
+		try {
+			for (FileStatus status : fs.listStatus(inputPath)) {
+				if (status.isDir()) {
+					retPaths.addAll(getPaths(fs, status.getPath(), endTimeMillis));
+				} else {
+					if (status.getModificationTime() < endTimeMillis) {
+						retPaths.add(status.getPath());
+					}
+				}
+			}
+		} catch (IOException e) {
+			LOG.error("Exception in getPaths for inputPath: " + inputPath.toString());
 		}
 		
 		return retPaths;
 	}
 	
 	/**
-	 * @param args
+	 * Get the input source files to be used as input for the backup mappers
+	 * @param inputFs
+	 * @param inputPath
+	 * @param outputFs
 	 * @return
 	 * @throws IOException
-	 * @throws ParseException 
 	 */
-	public Job initJob(String[] args) throws IOException, ParseException {
-
-		Path inputPath = new Path(args[0]);
-		Path fakeOutputPath = new Path("fakeoutput");
-		String outputPath = args[1];
-		
-		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
-		conf.set("backup.input.path", inputPath.toString());
-		conf.set("backup.output.path", outputPath);
-		
-		FileSystem inputFs = FileSystem.get(inputPath.toUri(), new Configuration());
-		FileSystem outputFs = FileSystem.get(getConf());
-		List<Path> paths = getPaths(inputFs, inputPath);
-		int suggestedMapRedTasks = conf.getInt("mapred.map.tasks", 4);
+	public Path[] getInputSources(FileSystem inputFs, Path inputPath, FileSystem outputFs) throws IOException {
+		long endTimeMillis = DateUtil.getTimeAtResolution(System.currentTimeMillis(), Calendar.DATE);
+		List<Path> paths = Backup.getPaths(inputFs, inputPath, endTimeMillis);
+		int suggestedMapRedTasks = conf.getInt("mapred.map.tasks", 1);
 		Path[] inputSources = new Path[suggestedMapRedTasks];
 		for (int i=0; i < inputSources.length; i++) {
 			inputSources[i] = new Path("backup-inputsource" + i + ".txt");
@@ -224,6 +309,42 @@ public class Backup implements Tool {
 				} catch (IOException e) {
 					LOG.error("Error closing output filesystem", e);
 				}
+			}
+		}
+		
+		return inputSources;
+	}
+	
+	/**
+	 * @param args
+	 * @return
+	 * @throws IOException
+	 * @throws ParseException 
+	 */
+	public Job initJob(String[] args) throws IOException, ParseException {
+
+		Path inputPath = new Path(args[0]);
+		Path fakeOutputPath = new Path("backup-results");
+		String outputPath = args[1];
+		
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.set("backup.input.path", inputPath.toString());
+		conf.set("backup.output.path", outputPath);
+		
+		FileSystem inputFs = null;
+		FileSystem outputFs = null;
+		Path[] inputSources = null;
+		try {
+			inputFs = FileSystem.get(inputPath.toUri(), new Configuration());
+			outputFs = FileSystem.get(getConf());
+			inputSources = getInputSources(inputFs, inputPath, outputFs);
+		} finally {
+			if (inputFs != null) {
+				inputFs.close();
+			}
+			
+			if (outputFs != null) {
+				outputFs.close();
 			}
 		}
 		
@@ -274,19 +395,18 @@ public class Backup implements Tool {
 		job.waitForCompletion(true);
 		if (job.isSuccessful()) {
 			rc = 0;
-		}
-		
-		FileSystem hdfs = null;
-		try {
-			hdfs = FileSystem.get(job.getConfiguration());
-			hdfs.delete(FileOutputFormat.getOutputPath(job), true);
-			hdfs.delete(new Path("backup-inputsource*.txt"), false);
-		} finally {
-			if (hdfs != null) {
-				hdfs.close();
+			
+			FileSystem hdfs = null;
+			try {
+				hdfs = FileSystem.get(job.getConfiguration());
+				hdfs.delete(new Path("backup-inputsource*.txt"), false);
+			} finally {
+				if (hdfs != null) {
+					hdfs.close();
+				}
 			}
 		}
-
+		
 		return rc;
 	}
 

@@ -17,41 +17,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-package com.mozilla.pig.eval;
+
+package com.mozilla.pig.eval.date;
 
 import java.io.IOException;
-import java.util.Map;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 
-public class JsonMap extends EvalFunc<Map<String, Object>> {
+public class ParseDate extends EvalFunc<Long> {
 
-	public static enum ERRORS { JSONParseError, JSONMappingError };
+	public static enum ERRORS { DateParseError };
 	
-	private final ObjectMapper jsonMapper = new ObjectMapper();
-	
-	public Map<String, Object> exec(Tuple input) throws IOException {
+	@Override
+	public Long exec(Tuple input) throws IOException {
 		if (input == null || input.size() == 0) {
 			return null;
 		}
-
+		
+		SimpleDateFormat inputSdf = new SimpleDateFormat((String)input.get(0));
+		long t = 0L;
 		try {
-			reporter.progress();
-			Map<String,Object> values = jsonMapper.readValue((String)input.get(0), new TypeReference<Map<String,Object>>() { });
-			return values;
-		} catch(JsonParseException e) {
-			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
-		} catch(JsonMappingException e) {
-			pigLogger.warn(this, "JSON Mapping Error", ERRORS.JSONMappingError);
+			Date d = inputSdf.parse((String)input.get(1));
+			t = d.getTime();
+		} catch (ParseException e) {
+			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
 		}
 		
-		return null;
+		return t;
 	}
-
 }

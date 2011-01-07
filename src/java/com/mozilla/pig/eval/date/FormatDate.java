@@ -18,35 +18,28 @@
  * limitations under the License.
  */
 
-package com.mozilla.pig.eval;
+package com.mozilla.pig.eval.date;
 
 import java.io.IOException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Calendar;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
 
-public class ParseDate extends EvalFunc<Long> {
-
-	public static enum ERRORS { DateParseError };
+public class FormatDate extends EvalFunc<String> {
 	
 	@Override
-	public Long exec(Tuple input) throws IOException {
+	public String exec(Tuple input) throws IOException {
 		if (input == null || input.size() == 0) {
 			return null;
 		}
 		
-		SimpleDateFormat inputSdf = new SimpleDateFormat((String)input.get(0));
-		long t = 0L;
-		try {
-			Date d = inputSdf.parse((String)input.get(1));
-			t = d.getTime();
-		} catch (ParseException e) {
-			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
-		}
+		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(0));
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis((Long)input.get(1));
 		
-		return t;
+		return outputSdf.format(cal.getTime());
 	}
+	
 }
