@@ -20,20 +20,21 @@
  
 package com.mozilla.hadoop;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,10 +46,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import com.mozilla.util.DateUtil;
 
 
 /**
@@ -72,13 +72,13 @@ public class Backup implements Tool {
 	
 	public static class BackupMapper extends Mapper<LongWritable, Text, Text, Text> {
 
-		public enum ReportStats { DIRECTORY_GET_PATHS_FAILED, SUCCESS, COPY_FILE_FNF_FAILURE, COPY_FILE_FAILED, NOT_MODIFIED };
+		public enum ReportStats { DIRECTORY_GET_PATHS_FAILED, BYTES_EXPECTED, BYTES_COPIED, BYTES_OUTPUTFS, COPY_FILE_FNF_FAILURE, COPY_FILE_FAILED, NOT_MODIFIED };
 		
 		private FileSystem inputFs;
 		private FileSystem outputFs;
 		private String outputRootPath;
 		private Pattern filePattern;
-		
+
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
 		 */
@@ -108,16 +108,9 @@ public class Backup implements Tool {
 		 * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
 		 */
 		public void cleanup(Context context) {
-			if (inputFs != null) {
-				try {
-					inputFs.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
+			checkAndClose(inputFs);
 		}
-		
+		  
 		/**
 		 * Copy the file at inputPath to the destination cluster using the same directory structure
 		 * @param inputPath
@@ -126,8 +119,8 @@ public class Backup implements Tool {
 		 * @throws IOException
 		 */
 		private void copyFile(Path inputPath, Context context) throws InterruptedException, IOException {
-			DataInputStream dis = null;
-			DataOutputStream dos = null;
+			FSDataInputStream dis = null;
+			FSDataOutputStream dos = null;
 			
 			String commonPath = null;
 			Matcher m = filePattern.matcher(inputPath.toString());
@@ -139,29 +132,40 @@ public class Backup implements Tool {
 				throw new RuntimeException("Regex match on common path failed");
 			}
 			
+			Path fullOutputPath = new Path(outputRootPath + commonPath);
 			try {		
-				Path fullOutputPath = new Path(outputRootPath + commonPath);
 				outputFs.mkdirs(fullOutputPath.getParent());
+				long inputFileSize = inputFs.getFileStatus(inputPath).getLen();
 				if (outputFs.exists(fullOutputPath) && inputFs.getFileStatus(inputPath).getLen() == outputFs.getFileStatus(fullOutputPath).getLen()) {
 					context.getCounter(ReportStats.NOT_MODIFIED).increment(1L);
 				} else {
+					context.getCounter(ReportStats.BYTES_EXPECTED).increment(inputFileSize);
+					
 					dis = inputFs.open(inputPath);
 					dos = outputFs.create(fullOutputPath, true);
 
-					byte[] buffer = new byte[32768];
+					LOG.info("Writing " + inputPath.toString() + " to " + fullOutputPath);
+					String statusStr = inputPath.toString() + ": copying [ %s / %s ]";
+					long totalBytesWritten = 0L;
+					Object[] statusFormatArgs = new Object[] { StringUtils.humanReadableInt(totalBytesWritten), StringUtils.humanReadableInt(inputFileSize) };
+					
+					byte[] buffer = new byte[65536];
 					int bytesRead = 0;
 					int writeCount = 0;
-					while ((bytesRead = dis.read(buffer)) > 0) {
+					while ((bytesRead = dis.read(buffer)) >= 0) {
 						dos.write(buffer, 0, bytesRead);
-						if (writeCount % 100 == 0) {
+						totalBytesWritten += bytesRead;
+						if (writeCount % 10 == 0) {
 							context.progress();
 							writeCount = 0;
+							// output copy status
+							statusFormatArgs[0] = StringUtils.humanReadableInt(totalBytesWritten);
+							context.setStatus(String.format(statusStr, statusFormatArgs));
 						}
 						writeCount++;
 					}
+					context.getCounter(ReportStats.BYTES_COPIED).increment(totalBytesWritten);
 				}
-				
-				context.getCounter(ReportStats.SUCCESS).increment(1L);
 			} catch (FileNotFoundException e) {
 				LOG.error("Source file is missing", e);
 				context.getCounter(ReportStats.COPY_FILE_FNF_FAILURE).increment(1L);
@@ -170,40 +174,50 @@ public class Backup implements Tool {
 				context.getCounter(ReportStats.COPY_FILE_FAILED).increment(1L);
 				context.write(new Text(inputPath.toString()), new Text(""));
 			} finally {
-				if (dis != null) {
-					dis.close();
-				}
-				if (dos != null) {
-					dos.close();
-				}
+				checkAndClose(dis);
+				checkAndClose(dos);
 			}
+			
+			context.getCounter(ReportStats.BYTES_OUTPUTFS).increment(outputFs.getFileStatus(fullOutputPath).getLen());
 		}
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
 		 */
-		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
-			System.out.println("Received: " + value.toString());
-			
+		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {		
 			Path inputPath = new Path(value.toString());
 			List<Path> inputPaths = null;
 			try {
-				inputPaths = Backup.getAllPaths(inputFs, inputPath, DateUtil.getTimeAtResolution(System.currentTimeMillis(), Calendar.DATE));
+				inputPaths = Backup.getAllPaths(inputFs, inputPath);
+				if (inputPaths != null && inputPaths.size() > 0) {
+					for (Path p : inputPaths) {
+						copyFile(p, context);
+					}
+				}
 			} catch (Exception e) {
 				LOG.error("Directory getPaths failed", e);
 				context.getCounter(ReportStats.DIRECTORY_GET_PATHS_FAILED).increment(1L);
 				context.write(new Text(value.toString()), new Text(""));
 				return;
 			}
-			if (inputPaths != null && inputPaths.size() > 0) {
-				for (Path p : inputPaths) {
-					copyFile(p, context);
-				}
-			}
 		}
 		
 	}	
 
+	/**
+	 * Check the handle and close it
+	 * @param c
+	 */
+	private static void checkAndClose(java.io.Closeable c) {
+		if (c != null) {
+			try {
+				c.close();
+			} catch (IOException e) {
+				LOG.error("Error closing stream", e);
+			}
+		}
+	}
+	
 	/**
 	 * Get only the first level of paths
 	 * @param fs
@@ -212,13 +226,11 @@ public class Backup implements Tool {
 	 * @return
 	 * @throws IOException
 	 */
-	public static List<Path> getPaths(FileSystem fs, Path inputPath, long endTimeMillis) throws IOException {
+	public static List<Path> getPaths(FileSystem fs, Path inputPath) throws IOException {
 		List<Path> retPaths = new ArrayList<Path>();
 		try {
 			for (FileStatus status : fs.listStatus(inputPath)) {
-				if (status.getModificationTime() < endTimeMillis) {
-					retPaths.add(status.getPath());
-				}
+				retPaths.add(status.getPath());
 			}
 		} catch (IOException e) {
 			LOG.error("Exception in getPaths for inputPath: " + inputPath.toString());
@@ -227,6 +239,30 @@ public class Backup implements Tool {
 		return retPaths;
 	}
 	
+	/**
+	 * Load a list of paths from a file
+	 * @param fs
+	 * @param inputPath
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Path> loadPaths(FileSystem fs, Path inputPath) throws IOException {
+		List<Path> retPaths = new ArrayList<Path>();
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(fs.open(inputPath)));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				retPaths.add(new Path(line));
+			}
+		} catch (IOException e) {
+			LOG.error("Exception in loadPaths for inputPath: " + inputPath.toString());
+		} finally {
+			checkAndClose(reader);
+		}
+		
+		return retPaths;
+	}
 	
 	/**
 	 * Walk recursively to get all file paths
@@ -236,16 +272,14 @@ public class Backup implements Tool {
 	 * @return
 	 * @throws IOException
 	 */
-	public static List<Path> getAllPaths(FileSystem fs, Path inputPath, long endTimeMillis) throws IOException {
+	public static List<Path> getAllPaths(FileSystem fs, Path inputPath) throws IOException {
 		List<Path> retPaths = new ArrayList<Path>();
 		try {
 			for (FileStatus status : fs.listStatus(inputPath)) {
 				if (status.isDir()) {
-					retPaths.addAll(getPaths(fs, status.getPath(), endTimeMillis));
+					retPaths.addAll(getPaths(fs, status.getPath()));
 				} else {
-					if (status.getModificationTime() < endTimeMillis) {
-						retPaths.add(status.getPath());
-					}
+					retPaths.add(status.getPath());
 				}
 			}
 		} catch (IOException e) {
@@ -263,9 +297,7 @@ public class Backup implements Tool {
 	 * @return
 	 * @throws IOException
 	 */
-	public Path[] getInputSources(FileSystem inputFs, Path inputPath, FileSystem outputFs) throws IOException {
-		long endTimeMillis = DateUtil.getTimeAtResolution(System.currentTimeMillis(), Calendar.DATE);
-		List<Path> paths = Backup.getPaths(inputFs, inputPath, endTimeMillis);
+	public Path[] createInputSources(List<Path> paths, FileSystem outputFs) throws IOException {
 		int suggestedMapRedTasks = conf.getInt("mapred.map.tasks", 1);
 		Path[] inputSources = new Path[suggestedMapRedTasks];
 		for (int i=0; i < inputSources.length; i++) {
@@ -288,27 +320,7 @@ public class Backup implements Tool {
 			}
 		} finally {
 			for (BufferedWriter writer : writers) {
-				try {
-					writer.close();
-				} catch (IOException e) {
-					LOG.error("Error closing writer for input source file", e);
-				}
-			}
-			
-			if (inputFs != null) {
-				try {
-					inputFs.close();
-				} catch (IOException e) {
-					LOG.error("Error closing input filesystem", e);
-				}
-			}
-			
-			if (outputFs != null) {
-				try {
-					outputFs.close();
-				} catch (IOException e) {
-					LOG.error("Error closing output filesystem", e);
-				}
+				checkAndClose(writer);
 			}
 		}
 		
@@ -323,9 +335,22 @@ public class Backup implements Tool {
 	 */
 	public Job initJob(String[] args) throws IOException, ParseException {
 
-		Path inputPath = new Path(args[0]);
-		Path fakeOutputPath = new Path("backup-results");
-		String outputPath = args[1];
+		Path inputPath = null;
+		Path loadPath = null;
+		String outputPath = null;
+		boolean useSpecifiedPaths = false;
+		for (int idx=0; idx < args.length; idx++) {
+			if ("-f".equals(args[idx])) {
+				useSpecifiedPaths = true;
+				loadPath = new Path(args[++idx]);
+			} else if (idx == args.length -1) {
+				outputPath = args[idx];
+			} else {
+				inputPath = new Path(args[idx]);
+			}
+		}
+
+		Path mrOutputPath = new Path("backup-results");
 		
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.set("backup.input.path", inputPath.toString());
@@ -337,15 +362,14 @@ public class Backup implements Tool {
 		try {
 			inputFs = FileSystem.get(inputPath.toUri(), new Configuration());
 			outputFs = FileSystem.get(getConf());
-			inputSources = getInputSources(inputFs, inputPath, outputFs);
+			if (useSpecifiedPaths) {
+				inputSources = createInputSources(loadPaths(outputFs, loadPath), outputFs);
+			} else {
+				inputSources = createInputSources(getPaths(inputFs, inputPath), outputFs);
+			}
 		} finally {
-			if (inputFs != null) {
-				inputFs.close();
-			}
-			
-			if (outputFs != null) {
-				outputFs.close();
-			}
+			checkAndClose(inputFs);
+			checkAndClose(outputFs);
 		}
 		
 		Job job = new Job(getConf());
@@ -366,7 +390,7 @@ public class Backup implements Tool {
 			FileInputFormat.addInputPath(job, source);
 		}
 	
-		FileOutputFormat.setOutputPath(job, fakeOutputPath);
+		FileOutputFormat.setOutputPath(job, mrOutputPath);
 		
 		return job;
 	}
@@ -375,7 +399,7 @@ public class Backup implements Tool {
 	 * @return
 	 */
 	private static int printUsage() {
-		System.out.println("Usage: " + NAME + " [generic-options] <input-path> <output-path>");
+		System.out.println("Usage: " + NAME + " [generic-options] [-f <file-list-path>] <input-path> <output-path>");
 		System.out.println();
 		GenericOptionsParser.printGenericCommandUsage(System.out);
 		
@@ -386,7 +410,7 @@ public class Backup implements Tool {
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
 	 */
 	public int run(String[] args) throws Exception {
-		if (args.length != 2) {
+		if (args.length < 2) {
 			return printUsage();
 		}
 		
@@ -399,11 +423,9 @@ public class Backup implements Tool {
 			FileSystem hdfs = null;
 			try {
 				hdfs = FileSystem.get(job.getConfiguration());
-				hdfs.delete(new Path("backup-inputsource*.txt"), false);
+				//hdfs.delete(new Path("backup-inputsource*.txt"), false);
 			} finally {
-				if (hdfs != null) {
-					hdfs.close();
-				}
+				checkAndClose(hdfs);
 			}
 		}
 		
