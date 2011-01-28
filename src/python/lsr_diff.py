@@ -11,7 +11,7 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is __________________________________________.
+# The Original Code is Mozilla Akela.
 #
 # The Initial Developer of the Original Code is
 # Mozilla Foundation.

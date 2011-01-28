@@ -25,4 +25,5 @@ ant hadoop-jar
 
 License
 ======================================================================
-All aspects of this software are distributed under Apache Software License 2.0.
+All aspects of this software written in Java are distributed under Apache Software License 2.0.
+All aspects of this software written in Python are distributed under the Mozilla Public License (http://www.mozilla.org/MPL/) MPL/LGPL/GPL tri-license.
