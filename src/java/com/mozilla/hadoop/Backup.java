@@ -277,7 +277,7 @@ public class Backup implements Tool {
 		try {
 			for (FileStatus status : fs.listStatus(inputPath)) {
 				if (status.isDir()) {
-					retPaths.addAll(getPaths(fs, status.getPath()));
+					retPaths.addAll(getAllPaths(fs, status.getPath()));
 				} else {
 					retPaths.add(status.getPath());
 				}
