@@ -219,27 +219,6 @@ public class Backup implements Tool {
 	}
 	
 	/**
-	 * Get only the first level of paths
-	 * @param fs
-	 * @param inputPath
-	 * @param endTimeMillis
-	 * @return
-	 * @throws IOException
-	 */
-	public static List<Path> getPaths(FileSystem fs, Path inputPath) throws IOException {
-		List<Path> retPaths = new ArrayList<Path>();
-		try {
-			for (FileStatus status : fs.listStatus(inputPath)) {
-				retPaths.add(status.getPath());
-			}
-		} catch (IOException e) {
-			LOG.error("Exception in getPaths for inputPath: " + inputPath.toString());
-		}
-		
-		return retPaths;
-	}
-	
-	/**
 	 * Load a list of paths from a file
 	 * @param fs
 	 * @param inputPath
@@ -265,6 +244,28 @@ public class Backup implements Tool {
 	}
 	
 	/**
+	 * Walk recursively to get all file paths up to a max depth
+	 * @param fs
+	 * @param inputPath
+	 * @param depth
+	 * @param maxDepth
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Path> getPaths(FileSystem fs, Path inputPath, int depth, int maxDepth) throws IOException {
+		List<Path> retPaths = new ArrayList<Path>();
+		for (FileStatus status : fs.listStatus(inputPath)) {
+			if (status.isDir() && (maxDepth == -1 || depth < maxDepth)) {
+				retPaths.addAll(getPaths(fs, status.getPath(), depth + 1, maxDepth));
+			} else {
+				retPaths.add(status.getPath());
+			}
+		}
+		
+		return retPaths;
+	}
+	
+	/**
 	 * Walk recursively to get all file paths
 	 * @param fs
 	 * @param inputPath
@@ -273,20 +274,7 @@ public class Backup implements Tool {
 	 * @throws IOException
 	 */
 	public static List<Path> getAllPaths(FileSystem fs, Path inputPath) throws IOException {
-		List<Path> retPaths = new ArrayList<Path>();
-		try {
-			for (FileStatus status : fs.listStatus(inputPath)) {
-				if (status.isDir()) {
-					retPaths.addAll(getAllPaths(fs, status.getPath()));
-				} else {
-					retPaths.add(status.getPath());
-				}
-			}
-		} catch (IOException e) {
-			LOG.error("Exception in getPaths for inputPath: " + inputPath.toString());
-		}
-		
-		return retPaths;
+		return getPaths(fs, inputPath, 0, -1);
 	}
 	
 	/**
@@ -301,7 +289,7 @@ public class Backup implements Tool {
 		int suggestedMapRedTasks = conf.getInt("mapred.map.tasks", 1);
 		Path[] inputSources = new Path[suggestedMapRedTasks];
 		for (int i=0; i < inputSources.length; i++) {
-			inputSources[i] = new Path("backup-inputsource" + i + ".txt");
+			inputSources[i] = new Path(NAME + "-inputsource" + i + ".txt");
 		}
 		List<BufferedWriter> writers = new ArrayList<BufferedWriter>();
 		int idx = 0;
@@ -350,7 +338,7 @@ public class Backup implements Tool {
 			}
 		}
 
-		Path mrOutputPath = new Path("backup-results");
+		Path mrOutputPath = new Path(NAME + "-results");
 		
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.set("backup.input.path", inputPath.toString());
@@ -365,7 +353,7 @@ public class Backup implements Tool {
 			if (useSpecifiedPaths) {
 				inputSources = createInputSources(loadPaths(outputFs, loadPath), outputFs);
 			} else {
-				inputSources = createInputSources(getPaths(inputFs, inputPath), outputFs);
+				inputSources = createInputSources(getPaths(inputFs, inputPath, 0, 2), outputFs);
 			}
 		} finally {
 			checkAndClose(inputFs);
@@ -423,7 +411,7 @@ public class Backup implements Tool {
 			FileSystem hdfs = null;
 			try {
 				hdfs = FileSystem.get(job.getConfiguration());
-				//hdfs.delete(new Path("backup-inputsource*.txt"), false);
+				hdfs.delete(new Path(NAME + "-inputsource*.txt"), false);
 			} finally {
 				checkAndClose(hdfs);
 			}

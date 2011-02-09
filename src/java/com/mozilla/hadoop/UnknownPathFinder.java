@@ -21,6 +21,7 @@
 package com.mozilla.hadoop;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -107,7 +108,12 @@ public class UnknownPathFinder {
 			if (status.isDir() && depth < maxDepth) {
 				retPaths.addAll(getAllPaths(fs, status.getPath(), depth + 1, maxDepth));
 			} else {
-				retPaths.add(status.getPath().toString());
+				String p = status.getPath().toString();
+				if (!p.contains("-ROOT-") && !p.contains(".META.") && !p.contains(".logs") && 
+					!p.contains(".regioninfo") && !p.contains("compaction.dir") && 
+					!p.contains("hbase.version")) {
+					retPaths.add(p);
+				}
 			}
 		}
 		
@@ -139,11 +145,42 @@ public class UnknownPathFinder {
 		return fsPaths;
 	}
 	
+	/**
+	 * Deletes all of the paths specified
+	 * @param conf
+	 * @param paths
+	 * @return
+	 * @throws IOException
+	 */
+	public static boolean deleteFilesystemPaths(Configuration conf, Collection<String> paths) throws IOException {
+		boolean success = true;
+		
+		FileSystem hdfs = null;
+		try {
+			hdfs = FileSystem.get(conf);
+			for (String s : paths) {
+				Path p = new Path(s);
+				if (!hdfs.delete(p, true)) {
+					LOG.info("Failed to delete: " + s);
+					success = false;
+					break;
+				} else {
+					LOG.info("Successfully deleted: " + s);
+				}
+			}
+		} finally {
+			if (hdfs != null) {
+				hdfs.close();
+			}
+		}
+		
+		return success;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		int retCode = 0;
 		
-		Configuration conf = new Configuration();
-		Configuration hbaseConf = HBaseConfiguration.create(conf);
+		Configuration hbaseConf = HBaseConfiguration.create(new Configuration());
 		Path hbaseRootDir = new Path(hbaseConf.get("hbase.rootdir"));
 		Set<String> knownRegionPaths = getRegionPaths(hbaseRootDir, HConstants.META_TABLE_NAME);
 		Set<String> fsPaths = getFilesystemPaths(hbaseConf, hbaseRootDir);
@@ -151,6 +188,7 @@ public class UnknownPathFinder {
 		for (String p : fsPaths) {
 			System.out.println(p);
 		}
+		//deleteFilesystemPaths(hbaseConf, fsPaths);
 		
 		System.exit(retCode);
 	}
