@@ -25,16 +25,23 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
+
+import com.mozilla.util.DateUtil;
 
 public class MultiScanTableMapReduceUtil {
 
@@ -113,4 +120,47 @@ public class MultiScanTableMapReduceUtil {
 		return Base64.encodeBytes(baos.toByteArray());
 	}
 
+	/**
+	 * Generates an array of scans for different salted ranges for the given dates
+	 * This is really only useful for Mozilla Socorro in the way it does row-id hashing
+	 * @param startDate
+	 * @param endDate
+	 * @return
+	 */
+	public static Scan[] generateScans(Calendar startCal, Calendar endCal, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+		SimpleDateFormat rowsdf = new SimpleDateFormat("yyMMdd");
+		ArrayList<Scan> scans = new ArrayList<Scan>();		
+		String[] salts = new String[] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" };
+		
+		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
+		
+		while (startCal.getTimeInMillis() < endTime) {
+			int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
+			
+			for (int i=0; i < salts.length; i++) {
+				Scan s = new Scan();
+				s.setCaching(caching);
+				s.setCacheBlocks(cacheBlocks);
+				
+				// add columns
+				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
+					s.addColumn(col.getKey(), col.getValue());
+				}
+				
+				s.setStartRow(Bytes.toBytes(salts[i] + String.format("%06d", d)));
+				s.setStopRow(Bytes.toBytes(salts[i] + String.format("%06d", d + 1)));
+				
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Adding start-stop range: " + salts[i] + String.format("%06d", d) + " - " + salts[i] + String.format("%06d", d + 1));
+				}
+				
+				scans.add(s);
+			}
+			
+			startCal.add(Calendar.DATE, 1);
+		}
+		
+		return scans.toArray(new Scan[scans.size()]);
+	}
+	
 }

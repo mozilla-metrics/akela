@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -70,7 +71,7 @@ public class Backup implements Tool {
 	
 	private Configuration conf;
 	
-	public static class BackupMapper extends Mapper<LongWritable, Text, Text, Text> {
+	public static class BackupMapper extends Mapper<LongWritable, Text, Text, NullWritable> {
 
 		public enum ReportStats { DIRECTORY_GET_PATHS_FAILED, BYTES_EXPECTED, BYTES_COPIED, BYTES_OUTPUTFS, COPY_FILE_FNF_FAILURE, COPY_FILE_FAILED, NOT_MODIFIED };
 		
@@ -172,7 +173,7 @@ public class Backup implements Tool {
 			} catch (Exception e) {
 				LOG.error("Error copying file", e);
 				context.getCounter(ReportStats.COPY_FILE_FAILED).increment(1L);
-				context.write(new Text(inputPath.toString()), new Text(""));
+				context.write(new Text(inputPath.toString()), NullWritable.get());
 			} finally {
 				checkAndClose(dis);
 				checkAndClose(dos);
@@ -197,7 +198,7 @@ public class Backup implements Tool {
 			} catch (Exception e) {
 				LOG.error("Directory getPaths failed", e);
 				context.getCounter(ReportStats.DIRECTORY_GET_PATHS_FAILED).increment(1L);
-				context.write(new Text(value.toString()), new Text(""));
+				context.write(new Text(value.toString()), NullWritable.get());
 				return;
 			}
 		}
