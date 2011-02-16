@@ -44,7 +44,7 @@ print "DEST Cluster lsr results: " + dest_list
 
 compare_dict = {}
 
-def read_lsr_file(fname):
+def read_lsr_file(fname, is_dest):
     global compare_dict
     generic_field_grammar = "([^\s]+)"
     line_pattern = re.compile(r"%s\s+%s\s+%s\s+%s\s+%s\s+%s\s+%s\s+%s\s+" % (generic_field_grammar,generic_field_grammar,generic_field_grammar,generic_field_grammar,generic_field_grammar,generic_field_grammar,generic_field_grammar,generic_field_grammar))
@@ -55,12 +55,12 @@ def read_lsr_file(fname):
             isdir = 1 if m.group(1).startswith("d") else 0
             path = m.group(8)
             size = long(m.group(5))
-            compare_dict.setdefault(path, [-1,-1, isdir])[0] = size
+            compare_dict.setdefault(path, [-1,-1, isdir])[is_dest] = size
     finally:
         fin.close()
 
-read_lsr_file(src_list)
-read_lsr_file(dest_list)
+read_lsr_file(src_list, 0)
+read_lsr_file(dest_list, 1)
 
 todelete = open("todelete.txt", "w")
 tocopy = open("tocopy.txt", "w")
