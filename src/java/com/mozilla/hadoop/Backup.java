@@ -146,9 +146,9 @@ public class Backup implements Tool {
 					dos = outputFs.create(fullOutputPath, true);
 
 					LOG.info("Writing " + inputPath.toString() + " to " + fullOutputPath);
-					String statusStr = inputPath.toString() + ": copying [ %d / %d ]";
+					String statusStr = inputPath.toString() + ": copying [ %s / %s ]";
 					long totalBytesWritten = 0L;
-					Object[] statusFormatArgs = new Object[] { totalBytesWritten, inputFileSize };
+					Object[] statusFormatArgs = new Object[] { StringUtils.humanReadableInt(totalBytesWritten), StringUtils.humanReadableInt(inputFileSize) };
 					
 					byte[] buffer = new byte[65536];
 					int bytesRead = 0;
@@ -160,7 +160,7 @@ public class Backup implements Tool {
 							context.progress();
 							writeCount = 0;
 							// output copy status
-							statusFormatArgs[0] = totalBytesWritten;
+							statusFormatArgs[0] = StringUtils.humanReadableInt(totalBytesWritten);
 							context.setStatus(String.format(statusStr, statusFormatArgs));
 						}
 						writeCount++;
