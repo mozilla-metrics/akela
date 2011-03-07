@@ -187,7 +187,6 @@ public class RiakExportToHDFS implements Tool {
 		}
 		
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
-		conf.set(RIAK_SERVERS, "http://lm-db-riak01.labs.mozilla.org:8098/riak,http://lm-db-riak02.labs.mozilla.org:8098/riak,http://lm-db-riak03.labs.mozilla.org:8098/riak,http://lm-db-riak04.labs.mozilla.org:8098/riak");
 		conf.set(RIAK_BUCKET, bucket);
 		
 		FileSystem hdfs = null;
