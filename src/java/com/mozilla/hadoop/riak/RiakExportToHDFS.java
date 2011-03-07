@@ -206,7 +206,7 @@ public class RiakExportToHDFS implements Tool {
 		job.setMapperClass(RiakExportToHDFSMapper.class);
 		
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		job.setOutputValueClass(NullWritable.class);
 		
 		job.setNumReduceTasks(0);
 		
