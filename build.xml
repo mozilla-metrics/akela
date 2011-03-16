@@ -31,10 +31,8 @@
 			<compilerarg line="-Xlint:unchecked"/>
 		</javac>
 	</target>
+	
 	<target name="compile" depends="compile-java"/>
-	<target name="ensure-class-name" unless="class">
-		<fail message="You must run this target with -Dclass=ClassName"/>
-	</target>
 	
 	<target name="hadoop-jar" depends="compile">
 		<delete file="${build.lib}/${project.name}-job.jar"/>

@@ -20,12 +20,13 @@
 
 package com.mozilla.hadoop.riak;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,11 +45,9 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.basho.riak.client.RiakBucketInfo;
-import com.basho.riak.client.RiakClient;
-import com.basho.riak.client.RiakObject;
-import com.basho.riak.client.response.BucketResponse;
-import com.basho.riak.client.response.FetchResponse;
+import com.basho.riak.pbc.RiakClient;
+import com.basho.riak.pbc.RiakObject;
+import com.google.protobuf.ByteString;
 
 public class RiakExportToHDFS implements Tool {
 
@@ -82,7 +81,11 @@ public class RiakExportToHDFS implements Tool {
 			String[] riakServers = conf.getStrings(RIAK_SERVERS);
 			clients = new RiakClient[riakServers.length];
 			for (int i=0; i < riakServers.length; i++) {
-				clients[i] = new RiakClient(riakServers[i]);
+				try {
+					clients[i] = new RiakClient(riakServers[i]);
+				} catch (IOException e) {
+					throw new RuntimeException("Failed to initialize RiakClient for: " + riakServers[i]);
+				}
 			}
 			bucket = conf.get(RIAK_BUCKET);
 		}
@@ -92,14 +95,11 @@ public class RiakExportToHDFS implements Tool {
 		 */
 		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 			String riakKey = value.toString();
-			FetchResponse fr = clients[serverIdx].fetch(bucket, riakKey);
-			if (fr.isSuccess()) {
-				RiakObject o = fr.getObject();
-				outputKey.set(o.getValue());
+			RiakObject[] roArray = clients[serverIdx].fetch(bucket, riakKey);
+			for (RiakObject o : roArray) {
+				outputKey.set(o.getValue().toStringUtf8());
 				context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
 				context.write(outputKey, NullWritable.get());
-			} else {
-				context.getCounter(ReportStats.FETCH_RESPONSE_NOT_SUCCESSFUL).increment(1L);
 			}
 			
 			serverIdx++;
@@ -141,17 +141,13 @@ public class RiakExportToHDFS implements Tool {
 		List<BufferedWriter> writers = new ArrayList<BufferedWriter>();
 		int idx = 0;
 		try {
-			BucketResponse br = riak.listBucket(bucket);
-			RiakBucketInfo rbi = br.getBucketInfo();
-			Collection<String> keys = rbi.getKeys();
-			
 			for (Path source : inputSources) {
 				writers.add(new BufferedWriter(new OutputStreamWriter(hdfs.create(source))));
 			}
 			
 			// split keys across N files and MapReduce to copy
-			for (String k : keys) {
-				writers.get(idx).write(k);
+			for (ByteString k : riak.listKeys(ByteString.copyFrom(bucket, "UTF-8"))) {
+				writers.get(idx).write(k.toStringUtf8());
 				writers.get(idx).newLine();
 				
 				idx++;
@@ -169,17 +165,63 @@ public class RiakExportToHDFS implements Tool {
 	}
 	
 	/**
+	 * Create the input source files to be used as input for the mappers
+	 * @param loadFilePath
+	 * @param hdfs
+	 * @return
+	 * @throws IOException
+	 */
+	public Path[] createInputSources(Path loadFilePath, FileSystem hdfs) throws IOException {
+		int suggestedMapRedTasks = conf.getInt("mapred.map.tasks", 1);
+		Path[] inputSources = new Path[suggestedMapRedTasks];
+		for (int i=0; i < inputSources.length; i++) {
+			inputSources[i] = new Path(NAME + "-inputsource" + i + ".txt");
+		}
+		List<BufferedWriter> writers = new ArrayList<BufferedWriter>();
+		int idx = 0;
+		BufferedReader reader = null;
+		try {
+			for (Path source : inputSources) {
+				writers.add(new BufferedWriter(new OutputStreamWriter(hdfs.create(source))));
+			}
+
+			// split keys across N files and MapReduce to copy
+			reader = new BufferedReader(new InputStreamReader(hdfs.open(loadFilePath)));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				writers.get(idx).write(line.trim());
+				writers.get(idx).newLine();
+				
+				idx++;
+				if (idx >= inputSources.length) {
+					idx = 0;
+				}
+			}
+			
+		} finally {
+			for (BufferedWriter writer : writers) {
+				checkAndClose(writer);
+			}
+		}
+		
+		return inputSources;
+	}
+	
+	/**
 	 * @param args
 	 * @return
 	 * @throws IOException
 	 * @throws ParseException 
 	 */
 	public Job initJob(String[] args) throws IOException, ParseException {
-
+		
 		String bucket = null;
+		Path loadPath = null;
 		String outputPath = null;
 		for (int idx=0; idx < args.length; idx++) {
-			if (idx == args.length-1) {
+			if ("-f".equals(args[idx])) {
+				loadPath = new Path(args[++idx]);
+			} else if (idx == args.length-1) {
 				outputPath = args[idx];
 			} else {
 				bucket = args[idx];
@@ -192,9 +234,16 @@ public class RiakExportToHDFS implements Tool {
 		FileSystem hdfs = null;
 		Path[] inputSources = null;
 		try {
-			RiakClient riak = new RiakClient(conf.getStrings(RIAK_SERVERS)[0]);
 			hdfs = FileSystem.get(getConf());
-			inputSources = createInputSources(riak, bucket, hdfs);
+			if (loadPath == null) {
+				RiakClient riak = new RiakClient(conf.getStrings(RIAK_SERVERS)[2]);
+				long startTime = System.currentTimeMillis();
+				inputSources = createInputSources(riak, bucket, hdfs);
+				long duration = System.currentTimeMillis() - startTime;
+				System.out.println(String.format("Created Input Sources took %d ms", new Object[] { duration }));
+			} else {
+				inputSources = createInputSources(loadPath, hdfs);
+			}
 		} finally {
 			checkAndClose(hdfs);
 		}
