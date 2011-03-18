@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -95,11 +96,20 @@ public class RiakExportToHDFS implements Tool {
 		 */
 		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 			String riakKey = value.toString();
-			RiakObject[] roArray = clients[serverIdx].fetch(bucket, riakKey);
-			for (RiakObject o : roArray) {
-				outputKey.set(o.getValue().toStringUtf8());
-				context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
-				context.write(outputKey, NullWritable.get());
+			RiakObject[] roArray = null;
+			try {
+				roArray = clients[serverIdx].fetch(bucket, riakKey);
+			} catch (IOException e) {
+				context.getCounter(ReportStats.FETCH_RESPONSE_NOT_SUCCESSFUL).increment(1L);
+				LOG.error("IOException occurred during fetch of key: " + riakKey, e);
+			}
+			
+			if (roArray != null) {
+				for (RiakObject o : roArray) {
+					outputKey.set(o.getValue().toStringUtf8());
+					context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
+					context.write(outputKey, NullWritable.get());
+				}
 			}
 			
 			serverIdx++;
@@ -269,6 +279,7 @@ public class RiakExportToHDFS implements Tool {
 		SequenceFileOutputFormat.setCompressOutput(job, true);
 		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
 		SequenceFileOutputFormat.setOutputPath(job, new Path(outputPath));
+		job.setOutputFormatClass(SequenceFileOutputFormat.class);
 		
 		return job;
 	}
@@ -301,7 +312,12 @@ public class RiakExportToHDFS implements Tool {
 			FileSystem hdfs = null;
 			try {
 				hdfs = FileSystem.get(job.getConfiguration());
-				hdfs.delete(new Path(NAME + "-inputsource*.txt"), false);
+				for (FileStatus fs : hdfs.listStatus(job.getWorkingDirectory())) {
+					String pathStr = fs.getPath().toString();
+					if (pathStr.startsWith(NAME + "inputsource")) {
+						hdfs.delete(fs.getPath(), false);
+					}
+				}
 			} finally {
 				checkAndClose(hdfs);
 			}
