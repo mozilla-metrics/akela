@@ -34,11 +34,11 @@ public class WeblogsLoader extends RegExLoader {
 	private static final String GENERIC_FIELD = "([^\\s]*)";
 	private static final String GENERIC_REQUIRED_FIELD = "([^\\s]+)";
 	private static final String DIGIT_FIELD = "(\\d+)";
-	private static final String QUOTED_FIELD = "\"(.*)\"";
+	private static final String QUOTED_FIELD = "\"?(.*)\"?";
 	private static final String SPACER = "\\s";
 	
-	private static final String IP_ADDRESS = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})";
-	private static final String DATE_TIME = "\\[([^\\]]+)\\]";
+	private static final String IP_ADDRESS = "([\\d.]{7,15})";
+	private static final String DATE_TIME = "\\[(\\d{2}/\\w{3}/\\d{4}:\\d{2}:\\d{2}:\\d{2}\\s[-+]\\d{4})\\]";
 	private static final String METHOD_URI_PROTOCOL = "\"([A-Z]*)\\s([^\\s]*)\\s([^\\s]*)\"";
 	
     private final static Pattern WEB_LOG_PATTERN = Pattern.compile(buildPattern());
@@ -47,6 +47,9 @@ public class WeblogsLoader extends RegExLoader {
 	 * Build the pattern using predefined components so its easier to read
 	 * @return
 	 */
+    /*
+     * "^(?>([\\d.]{7,15})\\s([^\\s]*)\\s([^\\s]*)\\s\\[(\\d{2}/\\w{3}/\\d{4}:\\d{2}:\\d{2}:\\d{2}\\s[-+]\\d{4})\\]\\s)(?>\"([A-Z]+)\\s([^\\s]*)\\sHTTP/1\\.[01]\"\\s(\\d{3})\\s(\\d+)\\s\"([^\"]+)\"\\s)(?>\"\"?([^\"]*)\"?\")(?>\\s\"([^\"]*)\")?$"
+     */
 	private static String buildPattern() {
 		StringBuilder pb = new StringBuilder("^");
 		pb.append(IP_ADDRESS).append(SPACER); // ip_address
@@ -58,7 +61,7 @@ public class WeblogsLoader extends RegExLoader {
 		pb.append(DIGIT_FIELD).append(SPACER); // bytes
 		pb.append(QUOTED_FIELD).append(SPACER); // referrer
 		pb.append(QUOTED_FIELD).append(SPACER); // user_agent
-		pb.append(QUOTED_FIELD).append("$"); // cookie
+		pb.append(QUOTED_FIELD).append("?$"); // cookie
 		
 		return pb.toString();
 	}

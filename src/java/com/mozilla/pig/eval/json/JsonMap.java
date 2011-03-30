@@ -21,10 +21,15 @@
 package com.mozilla.pig.eval.json;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.pig.EvalFunc;
+import org.apache.pig.data.BagFactory;
+import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -34,8 +39,35 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
 
 	public static enum ERRORS { JSONParseError, JSONMappingError };
 	
+	private static final BagFactory bagFactory = BagFactory.getInstance();
+	private static final TupleFactory tupleFactory = TupleFactory.getInstance();
 	private final ObjectMapper jsonMapper = new ObjectMapper();
 	
+	/**
+	 * Converts List objects to DataBag to keep Pig happy
+	 * @param l
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private DataBag convertListToBag(List<Object> l) {
+		DataBag dbag = bagFactory.newDefaultBag();
+		Tuple t = tupleFactory.newTuple();
+		for (Object o : l) {
+			if (o instanceof List) {
+				dbag.addAll(convertListToBag((List<Object>)o));
+			} else {
+				t.append(o);
+			}
+		}
+		
+		if (t.size() > 0) {
+			dbag.add(t);
+		}
+		
+		return dbag;
+	}
+	
+	@SuppressWarnings("unchecked")
 	public Map<String, Object> exec(Tuple input) throws IOException {
 		if (input == null || input.size() == 0) {
 			return null;
@@ -44,7 +76,18 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
 		try {
 			reporter.progress();
 			Map<String,Object> values = jsonMapper.readValue((String)input.get(0), new TypeReference<Map<String,Object>>() { });
-			return values;
+			Map<String,Object> safeValues = new HashMap<String,Object>();
+			for (Map.Entry<String, Object> entry : values.entrySet()) {
+				Object v = entry.getValue();
+				if (v != null && v instanceof List) {
+					DataBag db = convertListToBag((List<Object>)v);
+					safeValues.put(entry.getKey(), db);
+				} else {
+					safeValues.put(entry.getKey(), entry.getValue());
+				}
+			}
+
+			return safeValues;
 		} catch(JsonParseException e) {
 			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
 		} catch(JsonMappingException e) {

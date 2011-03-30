@@ -66,7 +66,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @throws IOException
 	 *             When setting up the details fails.
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	public static void initMultiScanTableMapperJob(final String table, final Scan[] scans,
 			final Class<? extends TableMapper> mapper, final Class<? extends WritableComparable> outputKeyClass,
 			final Class<? extends Writable> outputValueClass, final Job job) throws IOException {

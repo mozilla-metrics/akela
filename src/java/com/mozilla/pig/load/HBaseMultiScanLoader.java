@@ -201,7 +201,7 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("rawtypes")
 	public InputFormat getInputFormat() {
 		MultiScanTableInputFormat inputFormat = new MultiScanTableInputFormat();
 		inputFormat.setConf(conf);
@@ -209,7 +209,7 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void prepareToRead(RecordReader reader, PigSplit split) {
 		this.reader = reader;
 	}

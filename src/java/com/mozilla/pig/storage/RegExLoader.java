@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.pig.LoadFunc;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
 import org.apache.pig.data.DataByteArray;
-import org.apache.pig.data.DefaultTupleFactory;
+import org.apache.pig.data.TupleFactory;
 import org.apache.pig.data.Tuple;
 
 
@@ -72,7 +72,7 @@ public abstract class RegExLoader extends LoadFunc {
 				Matcher m = getPattern().matcher(line);
 				if (m.find()) {
 					tryNext = false;
-					t = DefaultTupleFactory.getInstance().newTuple();
+					t = TupleFactory.getInstance().newTuple();
 					for (int i = 1; i <= m.groupCount(); i++) {
 						t.append(new DataByteArray(m.group(i)));
 					}
@@ -88,11 +88,13 @@ public abstract class RegExLoader extends LoadFunc {
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public InputFormat getInputFormat() throws IOException {
 		return new TextInputFormat();
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void prepareToRead(RecordReader reader, PigSplit split) throws IOException {
 		this.reader = (LineRecordReader) reader;
 	}
