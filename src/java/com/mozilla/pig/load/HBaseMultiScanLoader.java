@@ -181,10 +181,11 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	public Tuple getNext() throws IOException {
 		try {
 			if (reader.nextKeyValue()) {
-				ImmutableBytesWritable rowKey = (ImmutableBytesWritable) reader.getCurrentKey();
-				Result result = (Result)reader.getCurrentValue();
-				Tuple tuple = TupleFactory.getInstance().newTuple(columns.size());
-				int i = 0;
+				ImmutableBytesWritable rowKey = reader.getCurrentKey();
+				Result result = reader.getCurrentValue();
+				Tuple tuple = TupleFactory.getInstance().newTuple(columns.size()+1);
+				tuple.set(0, new String(rowKey.get()));
+				int i = 1;
 				for (Map.Entry<byte[], byte[]> entry : columns.entrySet()) {
 					byte[] v = result.getValue(entry.getKey(), entry.getValue());
 					if (v != null) {
