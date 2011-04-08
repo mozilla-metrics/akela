@@ -150,6 +150,7 @@ public class TestPilotJsonSerde implements SerDe {
 				values.put("fxversion", metadata.get("fxVersion"));
 				values.put("operatingsystem", metadata.get("operatingSystem"));
 				values.put("tpversion", metadata.get("tpVersion"));
+				values.put("taskguid", metadata.get("task_guid"));
 				
 				StringWriter strWriter = new StringWriter();
 				jsonMapper.writeValue(strWriter, metadata.get("surveyAnswers"));
