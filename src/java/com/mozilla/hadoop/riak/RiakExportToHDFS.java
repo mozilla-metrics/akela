@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -62,11 +61,12 @@ public class RiakExportToHDFS implements Tool {
 	
 	private Configuration conf;
 	
-	public static class RiakExportToHDFSMapper extends Mapper<LongWritable, Text, Text, NullWritable> {
+	public static class RiakExportToHDFSMapper extends Mapper<LongWritable, Text, Text, Text> {
 
 		public enum ReportStats { RIAK_KEY_COUNT, FETCH_RESPONSE_NOT_SUCCESSFUL };
 		
 		private Text outputKey;
+		private Text outputValue;
 		
 		private String bucket;
 		private RiakClient[] clients;
@@ -77,6 +77,7 @@ public class RiakExportToHDFS implements Tool {
 		 */
 		public void setup(Context context) {
 			outputKey = new Text();
+			outputValue = new Text();
 			
 			Configuration conf = context.getConfiguration();
 			String[] riakServers = conf.getStrings(RIAK_SERVERS);
@@ -105,10 +106,11 @@ public class RiakExportToHDFS implements Tool {
 			}
 			
 			if (roArray != null) {
+				outputKey.set(riakKey);
 				for (RiakObject o : roArray) {
-					outputKey.set(o.getValue().toStringUtf8());
+					outputValue.set(o.getValue().toStringUtf8());
 					context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
-					context.write(outputKey, NullWritable.get());
+					context.write(outputKey, outputValue);
 				}
 			}
 			
@@ -265,7 +267,7 @@ public class RiakExportToHDFS implements Tool {
 		job.setMapperClass(RiakExportToHDFSMapper.class);
 		
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(NullWritable.class);
+		job.setOutputValueClass(Text.class);
 		
 		job.setNumReduceTasks(0);
 		
