@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,10 +47,21 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.basho.riak.pbc.RiakClient;
-import com.basho.riak.pbc.RiakObject;
-import com.google.protobuf.ByteString;
+import com.basho.riak.client.RiakClient;
+import com.basho.riak.client.RiakObject;
+import com.basho.riak.client.response.BucketResponse;
+import com.basho.riak.client.response.FetchResponse;
 
+/**
+ * A MapReduce job that exports a Riak Bucket to HDFS
+ * 
+ * This should be invoked like so:
+ * 
+ * com.mozilla.hadoop.riak.RiakExportToHDFS 
+ * 	-Dmapred.map.tasks=<number> 
+ * 	-Driak.servers=http://yourserver:8098/riak 
+ * 	<bucket> <output-dir>
+ */
 public class RiakExportToHDFS implements Tool {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RiakExportToHDFS.class);
@@ -63,6 +76,8 @@ public class RiakExportToHDFS implements Tool {
 	
 	public static class RiakExportToHDFSMapper extends Mapper<LongWritable, Text, Text, Text> {
 
+		private static final String VALUE_DELIMITER = "\u0001";
+		
 		public enum ReportStats { RIAK_KEY_COUNT, FETCH_RESPONSE_NOT_SUCCESSFUL };
 		
 		private Text outputKey;
@@ -71,6 +86,8 @@ public class RiakExportToHDFS implements Tool {
 		private String bucket;
 		private RiakClient[] clients;
 		private int serverIdx = 0;
+		
+		private SimpleDateFormat sdf;
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -83,13 +100,11 @@ public class RiakExportToHDFS implements Tool {
 			String[] riakServers = conf.getStrings(RIAK_SERVERS);
 			clients = new RiakClient[riakServers.length];
 			for (int i=0; i < riakServers.length; i++) {
-				try {
-					clients[i] = new RiakClient(riakServers[i]);
-				} catch (IOException e) {
-					throw new RuntimeException("Failed to initialize RiakClient for: " + riakServers[i]);
-				}
+				clients[i] = new RiakClient(riakServers[i]);
 			}
 			bucket = conf.get(RIAK_BUCKET);
+			
+			sdf = new SimpleDateFormat("yyyy-MM-dd");
 		}
 		
 		/* (non-Javadoc)
@@ -97,21 +112,19 @@ public class RiakExportToHDFS implements Tool {
 		 */
 		public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 			String riakKey = value.toString();
-			RiakObject[] roArray = null;
-			try {
-				roArray = clients[serverIdx].fetch(bucket, riakKey);
-			} catch (IOException e) {
-				context.getCounter(ReportStats.FETCH_RESPONSE_NOT_SUCCESSFUL).increment(1L);
-				LOG.error("IOException occurred during fetch of key: " + riakKey, e);
-			}
 			
-			if (roArray != null) {
+			RiakObject ro = null;
+
+			FetchResponse fr = clients[serverIdx].fetch(bucket, riakKey);
+			if (fr.isSuccess()) {
+				ro = fr.getObject();
+				Date lastModified = ro.getLastmodAsDate();
 				outputKey.set(riakKey);
-				for (RiakObject o : roArray) {
-					outputValue.set(o.getValue().toStringUtf8());
-					context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
-					context.write(outputKey, outputValue);
-				}
+				// This is less generic for others but we are using this data in Hive
+				// so output the riak key, last modified and the actual value as the output value
+				outputValue.set(riakKey + VALUE_DELIMITER + sdf.format(lastModified) + VALUE_DELIMITER + ro.getValue());
+				context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
+				context.write(outputKey, outputValue);
 			}
 			
 			serverIdx++;
@@ -158,14 +171,33 @@ public class RiakExportToHDFS implements Tool {
 			}
 			
 			// split keys across N files and MapReduce to copy
-			for (ByteString k : riak.listKeys(ByteString.copyFrom(bucket, "UTF-8"))) {
-				writers.get(idx).write(k.toStringUtf8());
-				writers.get(idx).newLine();
-				
-				idx++;
-				if (idx >= inputSources.length) {
-					idx = 0;
+			BucketResponse br = null;
+			long keyCount = 0L;
+			try {
+				// Unfortunately we can't stream keys from the Java API due to a collison of 
+				// JSON objects because Riak includes them in their JAR file
+				// TODO: Try to modify their JAR so that this isn't a problem
+				br = riak.listBucket(bucket);
+				if (br.isSuccess()) {
+					for (String k : br.getBucketInfo().getKeys()) {
+						writers.get(idx).write(k);
+						writers.get(idx).newLine();
+						
+						keyCount++;
+						idx++;
+						if (idx >= inputSources.length) {
+							idx = 0;
+						}
+					}
 				}
+			} finally {
+				if (br != null) {
+					br.close();
+				}
+			}
+			LOG.info("Found " + keyCount + " keys");
+			if (keyCount == 0) {
+				throw new IOException("0 keys retrieved from Riak");
 			}
 		} finally {
 			for (BufferedWriter writer : writers) {
@@ -248,7 +280,7 @@ public class RiakExportToHDFS implements Tool {
 		try {
 			hdfs = FileSystem.get(getConf());
 			if (loadPath == null) {
-				RiakClient riak = new RiakClient(conf.getStrings(RIAK_SERVERS)[2]);
+				RiakClient riak = new RiakClient(conf.getStrings(RIAK_SERVERS)[0]);
 				long startTime = System.currentTimeMillis();
 				inputSources = createInputSources(riak, bucket, hdfs);
 				long duration = System.currentTimeMillis() - startTime;

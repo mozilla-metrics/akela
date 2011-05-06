@@ -128,10 +128,13 @@ public class MultiScanTableMapReduceUtil {
 	 * @return
 	 */
 	public static Scan[] generateScans(Calendar startCal, Calendar endCal, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
-		SimpleDateFormat rowsdf = new SimpleDateFormat("yyMMdd");
 		ArrayList<Scan> scans = new ArrayList<Scan>();		
-		String[] salts = new String[] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" };
+		String[] salts = new String[16];
+		for (int i=0; i < 16; i++) {
+			salts[i] = Integer.toHexString(i);
+		}
 		
+		SimpleDateFormat rowsdf = new SimpleDateFormat("yyMMdd");
 		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
 		
 		while (startCal.getTimeInMillis() < endTime) {
@@ -163,4 +166,90 @@ public class MultiScanTableMapReduceUtil {
 		return scans.toArray(new Scan[scans.size()]);
 	}
 	
+	/**
+	 * Generates an array of scans for hex character and date prefixed ranges for the given dates (e.g. 16 buckets)
+	 * @param startCal
+	 * @param endCal
+	 * @param dateFormat
+	 * @param columns
+	 * @param caching
+	 * @param cacheBlocks
+	 * @return
+	 */
+	public static Scan[] generateHexPrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+		ArrayList<Scan> scans = new ArrayList<Scan>();		
+		String[] salts = new String[16];
+		for (int i=0; i < 16; i++) {
+			salts[i] = Integer.toHexString(i);
+		}
+		
+		SimpleDateFormat rowsdf = new SimpleDateFormat(dateFormat);
+		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
+		
+		while (startCal.getTimeInMillis() < endTime) {
+			int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
+			
+			for (int i=0; i < salts.length; i++) {
+				Scan s = new Scan();
+				s.setCaching(caching);
+				s.setCacheBlocks(cacheBlocks);
+				
+				// add columns
+				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
+					s.addColumn(col.getKey(), col.getValue());
+				}
+				
+				s.setStartRow(Bytes.toBytes(salts[i] + String.format("%06d", d)));
+				s.setStopRow(Bytes.toBytes(salts[i] + String.format("%06d", d + 1)));
+				
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Adding start-stop range: " + salts[i] + String.format("%06d", d) + " - " + salts[i] + String.format("%06d", d + 1));
+				}
+				
+				scans.add(s);
+			}
+			
+			startCal.add(Calendar.DATE, 1);
+		}
+		
+		return scans.toArray(new Scan[scans.size()]);
+	}
+	
+	/**
+	 * Generates an array of scans for byte and date prefixed ranges for the given dates (e.g. 128 buckets)
+	 * @param startCal
+	 * @param endCal
+	 * @param dateFormat
+	 * @param columns
+	 * @param caching
+	 * @param cacheBlocks
+	 * @return
+	 */
+	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+		ArrayList<Scan> scans = new ArrayList<Scan>();
+		
+		SimpleDateFormat rowsdf = new SimpleDateFormat(dateFormat);
+		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
+		
+		byte[] temp = new byte[1];
+		while (startCal.getTimeInMillis() < endTime) {		
+			for (byte b=Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+				Scan s = new Scan();
+				s.setCaching(caching);
+				s.setCacheBlocks(cacheBlocks);
+				// add columns
+				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
+					s.addColumn(col.getKey(), col.getValue());
+				}
+				
+				temp[0] = b;
+				s.setStartRow(Bytes.add(temp , Bytes.toBytes(rowsdf.format(startCal.getTime()))));
+				s.setStopRow(Bytes.add(temp , Bytes.toBytes(rowsdf.format(endCal.getTime()))));
+				
+				scans.add(s);
+			}
+		}
+		
+		return scans.toArray(new Scan[scans.size()]);
+	}
 }

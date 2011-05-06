@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,7 +66,7 @@ import org.codehaus.jackson.type.TypeReference;
 public class TestPilotJsonSerde implements SerDe {
 
 	private static final Log LOG = LogFactory.getLog(TestPilotJsonSerde.class.getName());
-
+	
 	/**
 	 * An ObjectInspector to be used as meta-data about a deserialized row
 	 */
@@ -79,6 +80,8 @@ public class TestPilotJsonSerde implements SerDe {
 	private final ObjectMapper jsonMapper = new ObjectMapper();
 	
 	private Text serializedOutputValue = new Text();
+	
+	private Pattern fieldDelimiter;
 	
 	/**
 	 * Initialize this SerDe with the system properties and table properties
@@ -114,6 +117,8 @@ public class TestPilotJsonSerde implements SerDe {
 			row.add(null);
 		}
 
+		fieldDelimiter = Pattern.compile("\u0001");
+		
 		LOG.debug("JsonSerde initialization complete");
 	}
 
@@ -136,10 +141,17 @@ public class TestPilotJsonSerde implements SerDe {
 			LOG.debug("Deserialize row: " + rowText.toString());
 		}
 
+		String[] fields = fieldDelimiter.split(rowText.toString());
+		if (fields.length == 3) {
+			throw new SerDeException("Expected 3 fields per entry");
+		}
+		
 		// Try parsing row into JSON object
 		Map<String,Object> values = new HashMap<String, Object>();
+		values.put("key", fields[0]);
+		values.put("timestamp", fields[1]);
 		try {
-			Map<String, Object> tempValues = jsonMapper.readValue(rowText.toString(), new TypeReference<Map<String,Object>>() { });
+			Map<String, Object> tempValues = jsonMapper.readValue(fields[2], new TypeReference<Map<String,Object>>() { });
 			
 			// Metadata
 			if (tempValues.containsKey("metadata")) {
