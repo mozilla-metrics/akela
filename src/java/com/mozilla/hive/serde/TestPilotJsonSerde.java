@@ -149,7 +149,7 @@ public class TestPilotJsonSerde implements SerDe {
 		// Try parsing row into JSON object
 		Map<String,Object> values = new HashMap<String, Object>();
 		values.put("key", fields[0]);
-		values.put("ts", Long.parseLong(fields[1]));
+		values.put("ts", fields[1]);
 		try {
 			Map<String, Object> tempValues = jsonMapper.readValue(fields[2], new TypeReference<Map<String,Object>>() { });
 			

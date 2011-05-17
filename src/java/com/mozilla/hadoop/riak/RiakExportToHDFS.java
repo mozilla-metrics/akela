@@ -116,8 +116,8 @@ public class RiakExportToHDFS implements Tool {
 				Date lastModified = ro.getLastmodAsDate();
 				outputKey.set(riakKey);
 				// This is less generic for others but we are using this data in Hive
-				// so output the riak key, last modified and the actual value as the output value
-				outputValue.set(riakKey + VALUE_DELIMITER + lastModified.getTime() + VALUE_DELIMITER + ro.getValue());
+				// so output the riak key, last modified (in seconds) and the actual value as the output value
+				outputValue.set(riakKey + VALUE_DELIMITER + (lastModified.getTime() / 1000L) + VALUE_DELIMITER + ro.getValue());
 				context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
 				context.write(outputKey, outputValue);
 			}
