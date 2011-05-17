@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -87,8 +86,6 @@ public class RiakExportToHDFS implements Tool {
 		private RiakClient[] clients;
 		private int serverIdx = 0;
 		
-		private SimpleDateFormat sdf;
-		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
 		 */
@@ -103,8 +100,6 @@ public class RiakExportToHDFS implements Tool {
 				clients[i] = new RiakClient(riakServers[i]);
 			}
 			bucket = conf.get(RIAK_BUCKET);
-			
-			sdf = new SimpleDateFormat("yyyy-MM-dd");
 		}
 		
 		/* (non-Javadoc)
@@ -122,7 +117,7 @@ public class RiakExportToHDFS implements Tool {
 				outputKey.set(riakKey);
 				// This is less generic for others but we are using this data in Hive
 				// so output the riak key, last modified and the actual value as the output value
-				outputValue.set(riakKey + VALUE_DELIMITER + sdf.format(lastModified) + VALUE_DELIMITER + ro.getValue());
+				outputValue.set(riakKey + VALUE_DELIMITER + lastModified.getTime() + VALUE_DELIMITER + ro.getValue());
 				context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
 				context.write(outputKey, outputValue);
 			}

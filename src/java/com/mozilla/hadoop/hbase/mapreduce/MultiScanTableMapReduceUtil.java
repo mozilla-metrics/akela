@@ -128,42 +128,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @return
 	 */
 	public static Scan[] generateScans(Calendar startCal, Calendar endCal, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
-		ArrayList<Scan> scans = new ArrayList<Scan>();		
-		String[] salts = new String[16];
-		for (int i=0; i < 16; i++) {
-			salts[i] = Integer.toHexString(i);
-		}
-		
-		SimpleDateFormat rowsdf = new SimpleDateFormat("yyMMdd");
-		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
-		
-		while (startCal.getTimeInMillis() < endTime) {
-			int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
-			
-			for (int i=0; i < salts.length; i++) {
-				Scan s = new Scan();
-				s.setCaching(caching);
-				s.setCacheBlocks(cacheBlocks);
-				
-				// add columns
-				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
-					s.addColumn(col.getKey(), col.getValue());
-				}
-				
-				s.setStartRow(Bytes.toBytes(salts[i] + String.format("%06d", d)));
-				s.setStopRow(Bytes.toBytes(salts[i] + String.format("%06d", d + 1)));
-				
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("Adding start-stop range: " + salts[i] + String.format("%06d", d) + " - " + salts[i] + String.format("%06d", d + 1));
-				}
-				
-				scans.add(s);
-			}
-			
-			startCal.add(Calendar.DATE, 1);
-		}
-		
-		return scans.toArray(new Scan[scans.size()]);
+		return generateHexPrefixScans(startCal, endCal, "yyMMdd", columns, caching, cacheBlocks);
 	}
 	
 	/**
@@ -216,7 +181,7 @@ public class MultiScanTableMapReduceUtil {
 	}
 	
 	/**
-	 * Generates an array of scans for byte and date prefixed ranges for the given dates (e.g. 128 buckets)
+	 * Generates an array of scans for byte and date prefixed ranges for the given dates (e.g. 256 buckets)
 	 * @param startCal
 	 * @param endCal
 	 * @param dateFormat

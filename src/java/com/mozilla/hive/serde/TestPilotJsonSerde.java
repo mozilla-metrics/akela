@@ -118,7 +118,7 @@ public class TestPilotJsonSerde implements SerDe {
 		}
 
 		fieldDelimiter = Pattern.compile("\u0001");
-		
+
 		LOG.debug("JsonSerde initialization complete");
 	}
 
@@ -136,20 +136,20 @@ public class TestPilotJsonSerde implements SerDe {
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object deserialize(Writable blob) throws SerDeException {
-		Text rowText = (Text) blob;
+		String rowText = ((Text) blob).toString();
 		if (LOG.isDebugEnabled()) {
-			LOG.debug("Deserialize row: " + rowText.toString());
+			LOG.debug("Deserialize row: " + rowText);
 		}
 
-		String[] fields = fieldDelimiter.split(rowText.toString());
-		if (fields.length == 3) {
+		String[] fields = fieldDelimiter.split(rowText);
+		if (fields.length != 3) {
 			throw new SerDeException("Expected 3 fields per entry");
 		}
 		
 		// Try parsing row into JSON object
 		Map<String,Object> values = new HashMap<String, Object>();
 		values.put("key", fields[0]);
-		values.put("timestamp", fields[1]);
+		values.put("ts", Long.parseLong(fields[1]));
 		try {
 			Map<String, Object> tempValues = jsonMapper.readValue(fields[2], new TypeReference<Map<String,Object>>() { });
 			
