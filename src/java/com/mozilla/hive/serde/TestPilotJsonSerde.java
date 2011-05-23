@@ -54,8 +54,9 @@ import org.codehaus.jackson.type.TypeReference;
  * 
  * Then you can create a table like so:
  * 
- * CREATE EXTERNAL TABLE IF NOT EXISTS riak_bucket (loc STRING, fxversion STRING, operatingsystem STRING, tpversion STRING, event_headers ARRAY<STRING>, 
- *   surveyanswers STRING, extensions MAP<STRING,BOOLEAN>, accessibilities MAP<STRING,STRING>, events ARRAY<ARRAY<BIGINT>>) 
+ * CREATE EXTERNAL TABLE IF NOT EXISTS riak_bucket (key STRING, ts STRING, loc STRING, fxversion STRING, operatingsystem STRING, tpversion STRING, 
+ *   event_headers ARRAY<STRING>, surveyanswers STRING, extensions MAP<STRING,BOOLEAN>, accessibilities MAP<STRING,STRING>, 
+ *   preferences MAP<STRING,STRING>, events ARRAY<ARRAY<BIGINT>>) 
  *   ROW FORMAT SERDE 'com.mozilla.hive.serde.TestPilotJsonSerde' LOCATION '/path/to/riak_bucket';
  *   
  * This code is based on <a href="http://code.google.com/p/hive-json-serde/">hive-json-serde on Google Code</a>. The key difference is this class 
@@ -193,6 +194,23 @@ public class TestPilotJsonSerde implements SerDe {
 						accessibilityMap.put(name, v);
 					}
 					values.put("accessibilities", accessibilityMap);
+				}
+				
+				// Hacky Preferences
+				Map<String,String> preferencesMap = new HashMap<String,String>();
+				for (Map.Entry<String, Object> metaEntry : metadata.entrySet()) {
+					String metaKey = metaEntry.getKey();
+					if (metaKey.startsWith("Preference")) {
+						String name = metaKey.replace("Preference ", "");
+						preferencesMap.put(name, String.valueOf(metaEntry.getValue()));
+					} else if (metaKey.equals("Sync configured")) {
+						String name = "sync.configured";
+						preferencesMap.put(name, String.valueOf(metaEntry.getValue()));
+					}
+				}
+				
+				if (preferencesMap.size() > 0) {
+					values.put("preferences", preferencesMap);
 				}
 			}
 			
