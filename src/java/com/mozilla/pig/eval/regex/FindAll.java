@@ -38,7 +38,7 @@ public class FindAll extends EvalFunc<Tuple> {
 		}
 		
 		if (input.size() != 2) {
-			throw new IOException("RegexExtract requires exactly 2 parameters");
+			throw new IOException("FindAll requires exactly 2 parameters");
 		}
 
 		Pattern p = Pattern.compile((String)input.get(1));

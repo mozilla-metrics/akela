@@ -169,6 +169,13 @@ public class TestPilotJsonSerde implements SerDe {
 				jsonMapper.writeValue(strWriter, metadata.get("surveyAnswers"));
 				values.put("surveyanswers", strWriter.getBuffer().toString());
 				
+				values.put("engines", metadata.get("engines"));
+				values.put("bookmark_items", metadata.get("bookmarkItems"));
+				values.put("keyworded_bookmarks", metadata.get("keywordedBookmarks"));
+				values.put("testpilot", metadata.get("testpilot"));
+				values.put("usage", metadata.get("usage"));
+				values.put("providers", metadata.get("providers"));
+				
 				// Extensions
 				if (metadata.containsKey("extensions")) {
 					List<Object> extensions = (List<Object>)metadata.get("extensions");
@@ -237,24 +244,34 @@ public class TestPilotJsonSerde implements SerDe {
 			String colName = columnNames.get(c);
 			TypeInfo ti = columnTypes.get(c);
 			Object value = null;
-			// Get type-safe JSON values
-			if (ti.getTypeName().equalsIgnoreCase(Constants.DOUBLE_TYPE_NAME)) {
-				value = Double.valueOf((String)values.get(colName));
-			} else if (ti.getTypeName().equalsIgnoreCase(Constants.BIGINT_TYPE_NAME)) {
-				value = Long.valueOf((String)values.get(colName));
-			} else if (ti.getTypeName().equalsIgnoreCase(Constants.INT_TYPE_NAME)) {
-				value = Integer.valueOf((String)values.get(colName));
-			} else if (ti.getTypeName().equalsIgnoreCase(Constants.TINYINT_TYPE_NAME)) {
-				value = Byte.valueOf((String)values.get(colName));
-			} else if (ti.getTypeName().equalsIgnoreCase(Constants.FLOAT_TYPE_NAME)) {
-				value = Float.valueOf((String)values.get(colName));
-			} else if (ti.getTypeName().equalsIgnoreCase(Constants.BOOLEAN_TYPE_NAME)) {
-				value = Boolean.valueOf((String)values.get(colName));
-			} else {
-				// Fall back, just get an object
-				value = values.get(colName);
+			
+			try {
+				// Get type-safe JSON values
+				if (ti.getTypeName().equalsIgnoreCase(Constants.DOUBLE_TYPE_NAME)) {
+					value = Double.valueOf((String)values.get(colName));
+				} else if (ti.getTypeName().equalsIgnoreCase(Constants.BIGINT_TYPE_NAME)) {
+					value = Long.valueOf((String)values.get(colName));
+				} else if (ti.getTypeName().equalsIgnoreCase(Constants.INT_TYPE_NAME)) {
+					value = Integer.valueOf((String)values.get(colName));
+				} else if (ti.getTypeName().equalsIgnoreCase(Constants.TINYINT_TYPE_NAME)) {
+					value = Byte.valueOf((String)values.get(colName));
+				} else if (ti.getTypeName().equalsIgnoreCase(Constants.FLOAT_TYPE_NAME)) {
+					value = Float.valueOf((String)values.get(colName));
+				} else if (ti.getTypeName().equalsIgnoreCase(Constants.BOOLEAN_TYPE_NAME)) {
+					value = Boolean.valueOf((String)values.get(colName));
+				} else {
+					// Fall back, just get an object
+					value = values.get(colName);
+				}
+			} catch (RuntimeException e) {
+				LOG.error("Class cast error for column name: " + colName);
+				Object o = values.get(colName);
+				if (o != null) {
+					LOG.error("Value was: " + o.toString());
+				}
+				throw new SerDeException(e);
 			}
-
+			
 			if (value == null) {
 				// If the column cannot be found, just make it a NULL value and
 				// skip over it
