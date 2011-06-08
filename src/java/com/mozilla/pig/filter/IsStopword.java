@@ -17,33 +17,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.ml;
+package com.mozilla.pig.filter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.pig.EvalFunc;
+import org.apache.pig.FilterFunc;
 import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
 
-public class Vectorizer extends EvalFunc<Tuple> {
+public class IsStopword extends FilterFunc {
 
-	private Map<String,Integer> featureIndex;
-	private static final TupleFactory tupleFactory = TupleFactory.getInstance();
+	private String stopwordDictPath;
+	private Set<String> stopwords;
 	
-	private void loadFeatureIndex(String featureIndexPath) throws IOException {
-		if (featureIndex == null) {
-			featureIndex = new HashMap<String,Integer>();
+	public IsStopword() {
+		stopwordDictPath = "stopwords.txt";
+	}
+	
+	private void loadStopwordDict() throws IOException {
+		if (stopwordDictPath != null) {
+			stopwords = new HashSet<String>();
 			
 			FileSystem hdfs = null;
-			Path p = new Path(featureIndexPath);
+			Path p = new Path(stopwordDictPath);
 			hdfs = FileSystem.get(p.toUri(), new Configuration());
 			for (FileStatus status : hdfs.listStatus(p)) {
 				if (!status.isDir()) {
@@ -51,9 +54,8 @@ public class Vectorizer extends EvalFunc<Tuple> {
 					try {
 						reader = new BufferedReader(new InputStreamReader(hdfs.open(status.getPath())));
 						String line = null;
-						int lineNumber = 1;
 						while ((line = reader.readLine()) != null) {
-							featureIndex.put(line.trim(), lineNumber++);
+							stopwords.add(line.trim());
 						}
 					} finally {
 						if (reader != null) {
@@ -63,36 +65,25 @@ public class Vectorizer extends EvalFunc<Tuple> {
 				}
 			}
 			
-			log.info("Loaded feature index with size: " + featureIndex.size());
+			log.info("Loaded stopword dictionary with size: " + stopwords.size());
 		}
 	}
 	
-	public Tuple exec(Tuple input) throws IOException {
-		if (input == null) {
+	@Override
+	public Boolean exec(Tuple input) throws IOException {
+		if (input == null || input.size() == 0) {
 			return null;
 		}
-		
-		if (input.size() != 2) {
-			throw new IOException("Vectorizer requires exactly 2 parameters");
-		}
-		
-		String featureIndexPath = (String)input.get(0);
-		if (featureIndex == null) {
-			loadFeatureIndex(featureIndexPath);
-		}
-		
-		Tuple output = tupleFactory.newTuple();
-		Tuple t = (Tuple)input.get(1);
-		for (Object o : t.getAll()) {
-			if (o instanceof String) {
-				Integer idx = featureIndex.get((String)o);
-				if (idx != null) {
-					output.append(idx);
-				}
-			}
-		}
-		
-		return output;
-	}
 
+		if (input.size() > 1) {
+			stopwordDictPath = (String)input.get(1);
+		}
+		
+		if (stopwords == null) {
+			loadStopwordDict();
+		}
+		
+		return stopwords.contains((String)input.get(0));
+	}
+	
 }
