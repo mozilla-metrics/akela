@@ -32,15 +32,26 @@ import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.apache.mahout.math.VectorWritable;
 import org.apache.pig.StoreFunc;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
+
+import com.mozilla.hadoop.riak.RiakExportToHDFS;
 
 public class DocumentVectorStorage extends StoreFunc {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RiakExportToHDFS.class);
+    
 	@SuppressWarnings("rawtypes")
 	protected RecordWriter writer = null;
 	
 	private Text outputKey = new Text();
 	private VectorWritable outputValue = new VectorWritable();
+	private final int dimensions;
+	
+	public DocumentVectorStorage(String dimension) {
+	    super();
+	    this.dimensions = Integer.parseInt(dimension);
+	}
 	
 	@SuppressWarnings("rawtypes")
 	@Override
@@ -58,18 +69,30 @@ public class DocumentVectorStorage extends StoreFunc {
 	@Override
 	public void putNext(Tuple tuple) throws IOException {
 		outputKey.set((String)tuple.get(0));
-		Tuple vecTuple = (Tuple)tuple.get(1);
-		Vector v = new RandomAccessSparseVector(vecTuple.size());
-		for (int i=0; i < vecTuple.size(); i++) {
-			Integer idx = (Integer)vecTuple.get(i);
-			v.set(i, idx.doubleValue());
+		Tuple vectorTuple = (Tuple)tuple.get(1);
+		Vector vector = new RandomAccessSparseVector(dimensions, vectorTuple.size());
+		for (int i=0; i < vectorTuple.size(); i++) {
+		    Object o = vectorTuple.get(i);
+		    switch (vectorTuple.getType(i)) {
+		        case DataType.INTEGER:
+		            // If this is just an integer then we just want to set the index to 1.0
+		            vector.set((Integer)o, 1.0);
+		            break;
+		        case DataType.TUPLE:
+		            // If this is a tuple then we want to set the index and the weight
+		            Tuple subt = (Tuple)o;
+		            vector.set((Integer)subt.get(0), (Double)subt.get(1));
+		            break;
+		        default:
+		            throw new RuntimeException("Unexpected tuple form");
+		    }
+		    
 		}
-		outputValue.set(v);
+		outputValue.set(vector);
 		try {
 			writer.write(outputKey, outputValue);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		    LOG.error("Interrupted while writing", e);
 		}
 	}
 

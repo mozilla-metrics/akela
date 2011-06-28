@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.EvalFunc;
+import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
@@ -42,16 +43,15 @@ public class Vectorizer extends EvalFunc<Tuple> {
 		if (featureIndex == null) {
 			featureIndex = new HashMap<String,Integer>();
 			
-			FileSystem hdfs = null;
 			Path p = new Path(featureIndexPath);
-			hdfs = FileSystem.get(p.toUri(), new Configuration());
-			for (FileStatus status : hdfs.listStatus(p)) {
+			FileSystem fs = FileSystem.get(p.toUri(), new Configuration());
+			for (FileStatus status : fs.listStatus(p)) {
 				if (!status.isDir()) {
 					BufferedReader reader = null;
 					try {
-						reader = new BufferedReader(new InputStreamReader(hdfs.open(status.getPath())));
+						reader = new BufferedReader(new InputStreamReader(fs.open(status.getPath())));
 						String line = null;
-						int lineNumber = 1;
+						int lineNumber = 0;
 						while ((line = reader.readLine()) != null) {
 							featureIndex.put(line.trim(), lineNumber++);
 						}
@@ -82,13 +82,12 @@ public class Vectorizer extends EvalFunc<Tuple> {
 		}
 		
 		Tuple output = tupleFactory.newTuple();
-		Tuple t = (Tuple)input.get(1);
-		for (Object o : t.getAll()) {
-			if (o instanceof String) {
-				Integer idx = featureIndex.get((String)o);
-				if (idx != null) {
-					output.append(idx);
-				}
+		DataBag db = (DataBag)input.get(1);
+		for (Tuple t : db) {
+		    // Expects each tuple's first element to be the feature
+			Integer idx = featureIndex.get((String)t.get(0));
+			if (idx != null) {
+				output.append(idx);
 			}
 		}
 		
