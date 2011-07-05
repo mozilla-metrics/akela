@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.mahout.math.NamedVector;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.apache.mahout.math.VectorWritable;
@@ -70,7 +71,7 @@ public class DocumentVectorStorage extends StoreFunc {
 	public void putNext(Tuple tuple) throws IOException {
 		outputKey.set((String)tuple.get(0));
 		Tuple vectorTuple = (Tuple)tuple.get(1);
-		Vector vector = new RandomAccessSparseVector(dimensions, vectorTuple.size());
+		Vector vector = new NamedVector(new RandomAccessSparseVector(dimensions, vectorTuple.size()), outputKey.toString());
 		for (int i=0; i < vectorTuple.size(); i++) {
 		    Object o = vectorTuple.get(i);
 		    switch (vectorTuple.getType(i)) {
