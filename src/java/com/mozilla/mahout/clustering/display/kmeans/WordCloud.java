@@ -19,7 +19,12 @@
  */
 package com.mozilla.mahout.clustering.display.kmeans;
 
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -68,6 +73,8 @@ public class WordCloud {
                     String feature = invertedFeatureIndex.get(e.index());
                     c.addTag(new Tag(feature, e.get()));
                 }
+                
+                cloudMap.put(clusterId, c);
             }
         } catch (IOException e) {
             LOG.error("IOException caught while reading clustered points", e);
@@ -91,7 +98,41 @@ public class WordCloud {
         }
     }
     
+    public void writeCloudsHTML(Map<Integer,Cloud> cloudMap, String outputPath) {
+        HTMLFormatter formatter = new HTMLFormatter();
+        
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputPath), "UTF-8"));
+            writer.write("<h2>KMeans k=" + cloudMap.size() + "</h2>\n");
+            for (Map.Entry<Integer, Cloud> entry : cloudMap.entrySet()) {
+                Integer clusterId = entry.getKey();
+                formatter.setHtmlTemplateTop("<h3>Cluster ID: &nbsp;" + clusterId + "</h3>");
+                writer.write(formatter.html(entry.getValue()));
+                writer.newLine();
+            }
+        } catch (UnsupportedEncodingException e) {
+            LOG.error("UTF-8 is unsupported?", e);
+        } catch (FileNotFoundException e) {
+            LOG.error("Could not create clouds HTML writer", e);
+        } catch (IOException e) {
+            LOG.error("IOException while writing clouds HTML");
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    LOG.error("Error closing clouds HTML writer", e);
+                }
+            }
+        }
+        
+    }
+    
     public static void main(String[] args) throws IOException {
+        if (args.length != 3) {
+            System.out.println("Usage: WordCloud <clusterPoints> <feature-index> <htmlOutputPath>");
+        }
         WordCloud wc = new WordCloud(new Path(args[0]), new Path(args[1]));
         
         Cloud template = new Cloud();
@@ -101,6 +142,6 @@ public class WordCloud {
         template.setMaxWeight(96.0);
         
         Map<Integer,Cloud> cloudMap = wc.getClouds(template);
-        wc.printCloudsHTML(cloudMap);
+        wc.writeCloudsHTML(cloudMap, args[2]);
     }
 }
