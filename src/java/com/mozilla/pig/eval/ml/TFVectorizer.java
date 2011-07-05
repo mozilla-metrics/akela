@@ -34,7 +34,7 @@ import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class TFIDFVectorizer extends EvalFunc<Tuple> {
+public class TFVectorizer extends EvalFunc<Tuple> {
 
     private Map<String, Integer> featureIndex;
     private static final TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -84,13 +84,13 @@ public class TFIDFVectorizer extends EvalFunc<Tuple> {
         Tuple output = tupleFactory.newTuple();
         DataBag db = (DataBag) input.get(1);
         for (Tuple t : db) {
-            if (t.size() == 3) {
-                // Expects each tuple to be docid,feature,tfidf
-                Integer featureId = featureIndex.get(t.get(1));
+            if (t.size() == 2) {
+                // Expects each tuple to be feature,tf
+                Integer featureId = featureIndex.get(t.get(0));
                 if (featureId != null) {
                     Tuple subt = tupleFactory.newTuple(2);
                     subt.set(0, featureId);
-                    subt.set(1, t.get(2));
+                    subt.set(1, t.get(1));
                     output.append(subt);
                 }
             }

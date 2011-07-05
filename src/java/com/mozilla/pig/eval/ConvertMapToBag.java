@@ -17,10 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.text;
+package com.mozilla.pig.eval;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.pig.EvalFunc;
@@ -29,40 +28,31 @@ import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-public class TermFrequency extends EvalFunc<DataBag> {
+public class ConvertMapToBag extends EvalFunc<DataBag> {
 
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
-    
-    public TermFrequency() {
-    }
     
     @Override
     public DataBag exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
             return null;
         }
-
-        DataBag db = (DataBag)input.get(0);
-        Map<String,Integer> termFreq = new HashMap<String,Integer>();
-        long docSize = db.size();
-        for (Tuple t : db) {
-            String word = (String)t.get(0);
-            int curCount = 0;
-            if (termFreq.containsKey(word)) {
-                curCount = termFreq.get(word);
-            }
-            termFreq.put(word, ++curCount);
-        }
-
+        
+        @SuppressWarnings("unchecked")
+        Map<Object,Object> m = (Map<Object,Object>)input.get(0);
+        
         DataBag output = bagFactory.newDefaultBag();
-        for (Map.Entry<String, Integer> entry: termFreq.entrySet()) {
-            Tuple t = tupleFactory.newTuple(2);
-            t.set(0, entry.getKey());
-            t.set(1, (double)entry.getValue()/(double)docSize);
-            output.add(t);
+        if (m != null) {
+            for (Map.Entry<Object, Object> entry : m.entrySet()) {
+                Tuple t = tupleFactory.newTuple(2);
+                t.set(0, entry.getKey());
+                t.set(1, entry.getValue());
+                output.add(t);
+            }
         }
         
         return output;
     }
+
 }

@@ -45,15 +45,15 @@ public class Vectorizer extends EvalFunc<Tuple> {
 			
 			Path p = new Path(featureIndexPath);
 			FileSystem fs = FileSystem.get(p.toUri(), new Configuration());
+			int index = 0;
 			for (FileStatus status : fs.listStatus(p)) {
 				if (!status.isDir()) {
 					BufferedReader reader = null;
 					try {
 						reader = new BufferedReader(new InputStreamReader(fs.open(status.getPath())));
 						String line = null;
-						int lineNumber = 0;
 						while ((line = reader.readLine()) != null) {
-							featureIndex.put(line.trim(), lineNumber++);
+							featureIndex.put(line.trim(), index++);
 						}
 					} finally {
 						if (reader != null) {

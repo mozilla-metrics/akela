@@ -19,18 +19,14 @@
  */
 package com.mozilla.pig.filter;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.FilterFunc;
 import org.apache.pig.data.Tuple;
+
+import com.mozilla.hadoop.fs.Dictionary;
 
 public class InDictionary extends FilterFunc {
 
@@ -43,28 +39,7 @@ public class InDictionary extends FilterFunc {
         
         private void loadDictionary() throws IOException {
             if (dictionaryPath != null) {
-                dictionary = new HashSet<String>();
-                
-                FileSystem hdfs = null;
-                Path p = new Path(dictionaryPath);
-                hdfs = FileSystem.get(p.toUri(), new Configuration());
-                for (FileStatus status : hdfs.listStatus(p)) {
-                    if (!status.isDir()) {
-                        BufferedReader reader = null;
-                        try {
-                            reader = new BufferedReader(new InputStreamReader(hdfs.open(status.getPath())));
-                            String line = null;
-                            while ((line = reader.readLine()) != null) {
-                                dictionary.add(line.trim());
-                            }
-                        } finally {
-                            if (reader != null) {
-                                reader.close();
-                            }
-                        }
-                    }
-                }
-                
+                dictionary = Dictionary.loadDictionary(new Path(dictionaryPath));
                 log.info("Loaded dictionary with size: " + dictionary.size());
             }
         }
