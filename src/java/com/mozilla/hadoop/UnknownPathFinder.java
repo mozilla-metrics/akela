@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.log4j.Logger;
 
 /**
  * UnknownPathFinder is designed to look for paths that are present in HDFS that are unknown
@@ -48,7 +49,7 @@ import org.apache.hadoop.hbase.util.Writables;
  */
 public class UnknownPathFinder {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(UnknownPathFinder.class);
+    private static final Logger LOG = Logger.getLogger(UnknownPathFinder.class);
 	
 	/**
 	 * Get all of the filesystem paths that HBase .META. knows about

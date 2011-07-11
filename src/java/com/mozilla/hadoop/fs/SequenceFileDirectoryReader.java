@@ -49,7 +49,6 @@ public class SequenceFileDirectoryReader {
         for(FileStatus status : fs.listStatus(inputPath)) {
             Path p = status.getPath();
             if (!status.isDir() && !p.getName().startsWith("_")) {
-                LOG.info("Adding path: " + p.toString());
                 paths.add(p);
             }
         }
@@ -57,11 +56,7 @@ public class SequenceFileDirectoryReader {
         pathIter = paths.iterator();
     }
     
-    private boolean nextReader() throws IOException {
-        if (curPath != null) {
-            LOG.info("Changing reader BEFORE: " + curPath.toString());
-        }
-        
+    private boolean nextReader() throws IOException {        
         if (curReader != null) {
             curReader.close();
         }
@@ -72,8 +67,6 @@ public class SequenceFileDirectoryReader {
         
         curPath = pathIter.next();
         curReader = new SequenceFile.Reader(fs, curPath, conf);
-        
-        LOG.info("Changing reader AFTER: " + curPath.toString());
         
         return true;
     }

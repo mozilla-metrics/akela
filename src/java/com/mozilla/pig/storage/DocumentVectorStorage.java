@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.log4j.Logger;
 import org.apache.mahout.math.NamedVector;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
@@ -36,11 +37,9 @@ import org.apache.pig.StoreFunc;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 
-import com.mozilla.hadoop.riak.RiakExportToHDFS;
-
 public class DocumentVectorStorage extends StoreFunc {
 
-    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RiakExportToHDFS.class);
+    private static final Logger LOG = Logger.getLogger(DocumentVectorStorage.class);
     
 	@SuppressWarnings("rawtypes")
 	protected RecordWriter writer = null;

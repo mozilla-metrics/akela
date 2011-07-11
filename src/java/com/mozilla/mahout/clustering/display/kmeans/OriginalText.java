@@ -46,7 +46,7 @@ import com.mozilla.hadoop.fs.SequenceFileDirectoryReader;
 
 public class OriginalText {
 
-private static final Logger LOG = Logger.getLogger(OriginalText.class);
+    private static final Logger LOG = Logger.getLogger(OriginalText.class);
     
     private final Path clusteredPointsPath;
     
@@ -139,8 +139,7 @@ private static final Logger LOG = Logger.getLogger(OriginalText.class);
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    LOG.error("Error closing writer", e);
                 }
             }
         }
@@ -148,7 +147,7 @@ private static final Logger LOG = Logger.getLogger(OriginalText.class);
     
     public static void main(String[] args) throws IOException {
         if (args.length != 3) {
-            System.out.println("Usage: WordCloud <clusterPoints> <originalDataPath> <outputPath>");
+            System.out.println("Usage: OriginalText <clusterPoints> <originalDataPath> <outputPath>");
         }
         OriginalText ot = new OriginalText(new Path(args[0]));
         Map<Integer,Set<String>> docIdMap = ot.getDocIds(0.1);

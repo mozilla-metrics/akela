@@ -35,7 +35,7 @@ import org.apache.log4j.Logger;
 
 public class Dictionary {
     
-    private static final Logger LOG = Logger.getLogger(SequenceFileDirectoryReader.class);
+    private static final Logger LOG = Logger.getLogger(Dictionary.class);
 
     public static Set<String> loadDictionary(Path dictionaryPath) throws IOException {
         Set<String> dictionary = null;

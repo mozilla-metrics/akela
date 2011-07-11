@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 import org.apache.pig.EvalFunc;
@@ -35,9 +36,8 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
 import com.mozilla.hadoop.fs.Dictionary;
-import com.mozilla.lucene.analysis.en.EnglishAnalyzer;
 
-public class Tokenize extends EvalFunc<DataBag> {
+public class NGramTokenize extends EvalFunc<DataBag> {
 
     private static final BagFactory bagFactory = BagFactory.getInstance();
     private static final TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -68,27 +68,27 @@ public class Tokenize extends EvalFunc<DataBag> {
             if (input.size() > 2) {
                 stem = Boolean.parseBoolean((String)input.get(2));
             }
+            boolean outputUnigrams = false;
             if (input.size() > 3) {
-                langCode = (String)input.get(3);
+                outputUnigrams = Boolean.parseBoolean((String)input.get(3));
+            }
+            int maxNGram = 3;
+            if (input.size() > 4) {
+                maxNGram = Integer.parseInt((String)input.get(4));
+            }
+            if (input.size() > 5) {
+                langCode = (String)input.get(5);
             }
             
-            if (langCode.startsWith("zh") || langCode.startsWith("ja")) {
-                analyzer = new org.apache.lucene.analysis.cjk.CJKAnalyzer(Version.LUCENE_31);
-            } else if (langCode.startsWith("de")) {
-                analyzer = new org.apache.lucene.analysis.de.GermanAnalyzer(Version.LUCENE_31);
-            } else if (langCode.startsWith("es")) {
-                analyzer = new org.apache.lucene.analysis.es.SpanishAnalyzer(Version.LUCENE_31);
+            if (stopwords != null && stopwords.size() != 0) {
+                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, stopwords, stem, outputUnigrams, maxNGram);
             } else {
-                if (stopwords != null && stopwords.size() > 0) {
-                    analyzer = new EnglishAnalyzer(Version.LUCENE_31, stopwords, stem);
-                } else {
-                    analyzer = new EnglishAnalyzer(Version.LUCENE_31, stem);
-                }
+                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, StandardAnalyzer.STOP_WORDS_SET, stem, outputUnigrams, maxNGram);
             }
         }
         
         DataBag output = bagFactory.newDefaultBag();
-        TokenStream stream = analyzer.tokenStream(NOFIELD, new StringReader((String)input.get(0)));
+        TokenStream stream = analyzer.tokenStream(NOFIELD, new StringReader((String) input.get(0)));
         CharTermAttribute termAttr = stream.addAttribute(CharTermAttribute.class);
         while (stream.incrementToken()) {
             if (termAttr.length() > 0) {
@@ -100,5 +100,4 @@ public class Tokenize extends EvalFunc<DataBag> {
 
         return output;
     }
-
 }

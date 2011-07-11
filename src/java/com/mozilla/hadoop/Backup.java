@@ -50,6 +50,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -65,7 +66,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class Backup implements Tool {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Backup.class);
+    private static final Logger LOG = Logger.getLogger(Backup.class);
 	
 	private static final String NAME = "Backup";
 	

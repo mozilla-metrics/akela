@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
 import com.basho.riak.client.RiakClient;
 import com.basho.riak.client.RiakObject;
@@ -63,7 +64,7 @@ import com.basho.riak.client.response.FetchResponse;
  */
 public class RiakExportToHDFS implements Tool {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RiakExportToHDFS.class);
+    private static final Logger LOG = Logger.getLogger(RiakExportToHDFS.class);
 	
 	private static final String NAME = "RiakExportToHDFS";
 	
