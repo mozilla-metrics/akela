@@ -72,18 +72,22 @@ public class NGramTokenize extends EvalFunc<DataBag> {
             if (input.size() > 3) {
                 outputUnigrams = Boolean.parseBoolean((String)input.get(3));
             }
-            int maxNGram = 3;
+            int minNGram = 2;
             if (input.size() > 4) {
-                maxNGram = Integer.parseInt((String)input.get(4));
+                minNGram = Integer.parseInt((String)input.get(4));
             }
+            int maxNGram = 3;
             if (input.size() > 5) {
-                langCode = (String)input.get(5);
+                maxNGram = Integer.parseInt((String)input.get(5));
+            }
+            if (input.size() > 6) {
+                langCode = (String)input.get(6);
             }
             
             if (stopwords != null && stopwords.size() != 0) {
-                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, stopwords, stem, outputUnigrams, maxNGram);
+                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, stopwords, stem, outputUnigrams, minNGram, maxNGram);
             } else {
-                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, StandardAnalyzer.STOP_WORDS_SET, stem, outputUnigrams, maxNGram);
+                analyzer = new com.mozilla.lucene.analysis.en.NGramEnglishAnalyzer(Version.LUCENE_31, StandardAnalyzer.STOP_WORDS_SET, stem, outputUnigrams, minNGram, maxNGram);
             }
         }
         

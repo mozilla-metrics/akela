@@ -46,6 +46,7 @@ public class NGramEnglishAnalyzer extends StopwordAnalyzerBase {
     private final Set<?> stemExclusionSet;
     private boolean stem = false;
     private boolean outputUnigrams = true;
+    private int minNGram = ShingleAllStopFilter.DEFAULT_MIN_SHINGLE_SIZE;
     private int maxNGram = ShingleAllStopFilter.DEFAULT_MAX_SHINGLE_SIZE;
 
     public NGramEnglishAnalyzer(Version version) {
@@ -61,17 +62,18 @@ public class NGramEnglishAnalyzer extends StopwordAnalyzerBase {
     }
     
     public NGramEnglishAnalyzer(Version version, Set<?> stopwords, boolean stem, boolean outputUnigrams) {
-        this(version, stopwords, stem, outputUnigrams, ShingleAllStopFilter.DEFAULT_MAX_SHINGLE_SIZE, CharArraySet.EMPTY_SET);
+        this(version, stopwords, stem, outputUnigrams, ShingleAllStopFilter.DEFAULT_MIN_SHINGLE_SIZE, ShingleAllStopFilter.DEFAULT_MAX_SHINGLE_SIZE, CharArraySet.EMPTY_SET);
     }
 
-    public NGramEnglishAnalyzer(Version version, Set<?> stopwords, boolean stem, boolean outputUnigrams, int maxNGram) {
-        this(version, stopwords, stem, outputUnigrams, maxNGram, CharArraySet.EMPTY_SET);
+    public NGramEnglishAnalyzer(Version version, Set<?> stopwords, boolean stem, boolean outputUnigrams, int minNGram, int maxNGram) {
+        this(version, stopwords, stem, outputUnigrams, minNGram, maxNGram, CharArraySet.EMPTY_SET);
     }
     
-    public NGramEnglishAnalyzer(Version matchVersion, Set<?> stopwords, boolean stem, boolean outputUnigrams, int maxNGram, Set<?> stemExclusionSet) {
+    public NGramEnglishAnalyzer(Version matchVersion, Set<?> stopwords, boolean stem, boolean outputUnigrams, int minNGram, int maxNGram, Set<?> stemExclusionSet) {
         super(matchVersion, stopwords);
         this.stem = stem;
         this.outputUnigrams = outputUnigrams;
+        this.minNGram = minNGram;
         this.maxNGram = maxNGram;
         this.stemExclusionSet = CharArraySet.unmodifiableSet(CharArraySet.copy(matchVersion, stemExclusionSet));
     }
@@ -84,7 +86,7 @@ public class NGramEnglishAnalyzer extends StopwordAnalyzerBase {
             result = new EnglishPossessiveFilter(result);
         }
         result = new LowerCaseFilter(matchVersion, result);
-        ShingleAllStopFilter sf = new ShingleAllStopFilter(result, maxNGram, stopwords);
+        ShingleAllStopFilter sf = new ShingleAllStopFilter(result, minNGram, maxNGram, stopwords);
         sf.setOutputUnigrams(outputUnigrams);
         if (!outputUnigrams) {
             sf.setOutputUnigramsIfNoShingles(false);

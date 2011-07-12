@@ -130,18 +130,18 @@ public class WordCloud {
     }
     
     public static void main(String[] args) throws IOException {
-        if (args.length != 3) {
-            System.out.println("Usage: WordCloud <clusterPoints> <feature-index> <htmlOutputPath>");
+        if (args.length != 4) {
+            System.out.println("Usage: WordCloud <clusterPoints> <feature-index> <tagsToDisplay> <htmlOutputPath>");
         }
         WordCloud wc = new WordCloud(new Path(args[0]), new Path(args[1]));
         
         Cloud template = new Cloud();
-        template.setMaxTagsToDisplay(50);
+        template.setMaxTagsToDisplay(Integer.parseInt(args[2]));
         template.setTagCase(Case.LOWER);
         template.setMinWeight(10.0);
         template.setMaxWeight(96.0);
         
         Map<Integer,Cloud> cloudMap = wc.getClouds(template);
-        wc.writeCloudsHTML(cloudMap, args[2]);
+        wc.writeCloudsHTML(cloudMap, args[3]);
     }
 }

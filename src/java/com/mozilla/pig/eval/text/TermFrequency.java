@@ -34,9 +34,6 @@ public class TermFrequency extends EvalFunc<DataBag> {
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
     
-    public TermFrequency() {
-    }
-    
     @Override
     public DataBag exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
@@ -45,7 +42,6 @@ public class TermFrequency extends EvalFunc<DataBag> {
 
         DataBag db = (DataBag)input.get(0);
         Map<String,Integer> termFreq = new HashMap<String,Integer>();
-        long docSize = db.size();
         for (Tuple t : db) {
             String word = (String)t.get(0);
             int curCount = 0;
@@ -59,7 +55,7 @@ public class TermFrequency extends EvalFunc<DataBag> {
         for (Map.Entry<String, Integer> entry: termFreq.entrySet()) {
             Tuple t = tupleFactory.newTuple(2);
             t.set(0, entry.getKey());
-            t.set(1, (double)entry.getValue()/(double)docSize);
+            t.set(1, (double)entry.getValue());
             output.add(t);
         }
         
