@@ -280,7 +280,7 @@ public class RiakExportToHDFS implements Tool {
 				long startTime = System.currentTimeMillis();
 				inputSources = createInputSources(riak, bucket, hdfs);
 				long duration = System.currentTimeMillis() - startTime;
-				System.out.println(String.format("Created Input Sources took %d ms", new Object[] { duration }));
+				System.out.printf("Created Input Sources took %d ms\n", duration);
 			} else {
 				inputSources = createInputSources(loadPath, hdfs);
 			}

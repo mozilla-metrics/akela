@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -199,6 +200,8 @@ public class MultiScanTableMapReduceUtil {
 		byte[] temp = new byte[1];
 		while (startCal.getTimeInMillis() < endTime) {		
 			for (byte b=Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+			    int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
+			    
 				Scan s = new Scan();
 				s.setCaching(caching);
 				s.setCacheBlocks(cacheBlocks);
@@ -208,13 +211,26 @@ public class MultiScanTableMapReduceUtil {
 				}
 				
 				temp[0] = b;
-				s.setStartRow(Bytes.add(temp , Bytes.toBytes(rowsdf.format(startCal.getTime()))));
-				s.setStopRow(Bytes.add(temp , Bytes.toBytes(rowsdf.format(endCal.getTime()))));
+				s.setStartRow(Bytes.add(temp , Bytes.toBytes(String.format("%06d", d))));
+				s.setStopRow(Bytes.add(temp , Bytes.toBytes(String.format("%06d", d + 1))));
+				if (LOG.isDebugEnabled()) {
+                    LOG.info("Adding start-stop range: " + temp + String.format("%06d", d) + " - " + temp + String.format("%06d", d + 1));
+                }
 				
 				scans.add(s);
 			}
+			
+			startCal.add(Calendar.DATE, 1);
 		}
 		
 		return scans.toArray(new Scan[scans.size()]);
+	}
+	
+	public static void main(String[] args) {
+	    Calendar cal = Calendar.getInstance();
+	    Map<byte[],byte[]> columns = new HashMap<byte[],byte[]>();
+	    columns.put(Bytes.toBytes("data"), Bytes.toBytes("json"));
+	    Scan[] scans = MultiScanTableMapReduceUtil.generateBytePrefixScans(cal, cal, "yyyyMMdd", columns, 100, false);
+	    System.out.println("Scans size: " + scans.length);
 	}
 }
