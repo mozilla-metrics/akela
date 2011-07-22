@@ -1,8 +1,8 @@
 # Akela #
 
-Version: 0.1  
+Version: 0.2  
 
-#### A bunch of utility classes for Java, Hadoop, HBase, Pig, etc. ####
+#### Mozilla's utility library for Hadoop, HBase, Pig, etc. ####
 
 ### Version Compatability ###
 This code is built with the following assumptions.  You may get mixed results if you deviate from these versions.
@@ -15,11 +15,11 @@ This code is built with the following assumptions.  You may get mixed results if
 ### Building ###
 To make a jar you can do:  
 
-`ant jar`
+`mvn package`
 
 To make a Hadoop MapReduce job jar with no defined main class in the manifest:  
 
-`ant hadoop-jar`
+`mvn assembly:assembly`
 
 
 ### License ###
