@@ -31,6 +31,10 @@
 
 	<repositories>
 		<repository>
+	      <id>mozilla-metrics-snapshots</id>
+	      <url>http://mozilla-metrics.github.com/maven2/snapshots</url>
+	    </repository>
+		<repository>
 			<id>java.net</id>
 			<url>http://download.java.net/maven/2</url>
 			<name>java.net Maven Repository</name>
