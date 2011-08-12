@@ -66,28 +66,38 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
 		
 		return dbag;
 	}
-	
+
+	/**
+	 * Convert map and its values to types that Pig can handle
+	 * @param m
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
+    private Map<String,Object> makeSafe(Map<String,Object> m) {
+	    Map<String,Object> safeValues = new HashMap<String,Object>();
+	    for (Map.Entry<String, Object> entry : m.entrySet()) {
+    	    Object v = entry.getValue();
+            if (v != null && v instanceof List) {
+                DataBag db = convertListToBag((List<Object>)v);
+                safeValues.put(entry.getKey(), db);
+            } else if (v != null && v instanceof Map) {
+                safeValues.put(entry.getKey(), makeSafe((Map<String,Object>)v));
+            } else {
+                safeValues.put(entry.getKey(), entry.getValue());
+            }
+	    }
+	    
+	    return safeValues;
+	}
+	
 	public Map<String, Object> exec(Tuple input) throws IOException {
 		if (input == null || input.size() == 0) {
 			return null;
 		}
 
 		try {
-			reporter.progress();
 			Map<String,Object> values = jsonMapper.readValue((String)input.get(0), new TypeReference<Map<String,Object>>() { });
-			Map<String,Object> safeValues = new HashMap<String,Object>();
-			for (Map.Entry<String, Object> entry : values.entrySet()) {
-				Object v = entry.getValue();
-				if (v != null && v instanceof List) {
-					DataBag db = convertListToBag((List<Object>)v);
-					safeValues.put(entry.getKey(), db);
-				} else {
-					safeValues.put(entry.getKey(), entry.getValue());
-				}
-			}
-
-			return safeValues;
+			return makeSafe(values);
 		} catch(JsonParseException e) {
 			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
 		} catch(JsonMappingException e) {

@@ -33,13 +33,13 @@ public class ConvertMapToBag extends EvalFunc<DataBag> {
     private static BagFactory bagFactory = BagFactory.getInstance();
     private static TupleFactory tupleFactory = TupleFactory.getInstance();
     
+    @SuppressWarnings("unchecked")
     @Override
     public DataBag exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
             return null;
         }
         
-        @SuppressWarnings("unchecked")
         Map<Object,Object> m = (Map<Object,Object>)input.get(0);
         
         DataBag output = bagFactory.newDefaultBag();
