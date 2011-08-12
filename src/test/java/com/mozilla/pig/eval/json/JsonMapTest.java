@@ -7,15 +7,11 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.junit.Test;
-
-import com.mozilla.telemetry.pig.eval.HistogramValueTuples;
 
 public class JsonMapTest {
 
