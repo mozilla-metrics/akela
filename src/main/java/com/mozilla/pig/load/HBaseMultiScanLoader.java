@@ -130,51 +130,6 @@ public class HBaseMultiScanLoader extends LoadFunc {
 		}
 	}
 
-	/**
-	 * Generates an array of scans for different salted ranges for the given dates
-	 * @param startDate
-	 * @param endDate
-	 * @return
-	 */
-//	public static Scan[] generateScans(Calendar startCal, Calendar endCal, Map<byte[], byte[]> columns) {
-//		SimpleDateFormat rowsdf = new SimpleDateFormat("yyMMdd");
-//		
-//		ArrayList<Scan> scans = new ArrayList<Scan>();		
-//		String[] salts = new String[] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" };
-//		
-//		long endTime = DateUtil.getEndTimeAtResolution(endCal.getTimeInMillis(), Calendar.DATE);
-//		
-//		while (startCal.getTimeInMillis() < endTime) {
-//			int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
-//			
-//			for (int i=0; i < salts.length; i++) {
-//				Scan s = new Scan();
-//				// TODO: make caching an option
-//				s.setCaching(100);
-//				// TODO: make this an option
-//				s.setCacheBlocks(false);
-//				
-//				// add columns
-//				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
-//					s.addColumn(col.getKey(), col.getValue());
-//				}
-//				
-//				s.setStartRow(Bytes.toBytes(salts[i] + String.format("%06d", d)));
-//				s.setStopRow(Bytes.toBytes(salts[i] + String.format("%06d", d + 1)));
-//				
-//				if (LOG.isDebugEnabled()) {
-//					LOG.debug("Adding start-stop range: " + salts[i] + String.format("%06d", d) + " - " + salts[i] + String.format("%06d", d + 1));
-//				}
-//				
-//				scans.add(s);
-//			}
-//			
-//			startCal.add(Calendar.DATE, 1);
-//		}
-//		
-//		return scans.toArray(new Scan[scans.size()]);
-//	}
-
 	@Override
 	public Tuple getNext() throws IOException {
 		try {

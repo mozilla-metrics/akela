@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -47,7 +46,7 @@ import com.mozilla.util.DateUtil;
 public class MultiScanTableMapReduceUtil {
 
 	private static Log LOG = LogFactory.getLog(MultiScanTableMapReduceUtil.class);
-
+	
 	/**
 	 * Use this before submitting a TableMap job. It will appropriately set up
 	 * the job.
@@ -192,6 +191,21 @@ public class MultiScanTableMapReduceUtil {
 	 * @return
 	 */
 	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+	    return generateBytePrefixScans(startCal, endCal, dateFormat, columns, caching, cacheBlocks, 1);
+	}
+	
+	/**
+	 * Same as above version but allows for specifying batch size as well
+	 * @param startCal
+	 * @param endCal
+	 * @param dateFormat
+	 * @param columns
+	 * @param caching
+	 * @param cacheBlocks
+	 * @param batch
+	 * @return
+	 */
+	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks, int batch) {
 		ArrayList<Scan> scans = new ArrayList<Scan>();
 		
 		SimpleDateFormat rowsdf = new SimpleDateFormat(dateFormat);
@@ -205,6 +219,9 @@ public class MultiScanTableMapReduceUtil {
 				Scan s = new Scan();
 				s.setCaching(caching);
 				s.setCacheBlocks(cacheBlocks);
+				if (batch > 1) {
+				    s.setBatch(batch);
+				}
 				// add columns
 				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
 					s.addColumn(col.getKey(), col.getValue());
@@ -224,13 +241,5 @@ public class MultiScanTableMapReduceUtil {
 		}
 		
 		return scans.toArray(new Scan[scans.size()]);
-	}
-	
-	public static void main(String[] args) {
-	    Calendar cal = Calendar.getInstance();
-	    Map<byte[],byte[]> columns = new HashMap<byte[],byte[]>();
-	    columns.put(Bytes.toBytes("data"), Bytes.toBytes("json"));
-	    Scan[] scans = MultiScanTableMapReduceUtil.generateBytePrefixScans(cal, cal, "yyyyMMdd", columns, 100, false);
-	    System.out.println("Scans size: " + scans.length);
 	}
 }
