@@ -53,7 +53,7 @@ public class HistogramValueTuples extends EvalFunc<DataBag> {
                             Tuple t = tupleFactory.newTuple(3);
                             t.set(0, hist.getKey());
                             t.set(1, v.getKey());
-                            t.set(2, v.getValue());
+                            t.set(2, Double.valueOf(((Number)v.getValue()).doubleValue()));
                             output.add(t);
                         }
                     }

@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mozilla.pig.load;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -60,13 +60,23 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	private static final Log LOG = LogFactory.getLog(HBaseMultiScanLoader.class);
 
 	/**
-	 * Constructor. Construct a HBase Table loader to load the cells of the
-	 * provided columns within the provided dates.
-	 * @param startDate the start date given in yyyyMMdd format
-	 * @param stopDate the stop date given in yyyyMMdd format 
-	 * @param columnList columns given in a comma-delimited list using colon between family and qualifier
+	 * @param startDate
+	 * @param stopDate
+	 * @param dateFormat
+	 * @param columnList
 	 */
-	public HBaseMultiScanLoader(String startDate, String stopDate, String columnList) {
+	public HBaseMultiScanLoader(String startDate, String stopDate, String dateFormat, String columnList) {
+	    this(startDate, stopDate, dateFormat, columnList, 100, "false");
+	}
+	        
+	/**
+	 * @param startDate
+	 * @param stopDate
+	 * @param dateFormat
+	 * @param columnList
+	 * @param useHexSalts
+	 */
+	public HBaseMultiScanLoader(String startDate, String stopDate, String dateFormat, String columnList, int caching, String useHexSalts) {
 		String[] colPairs = columnList.split(",");
 		for (int i=0; i < colPairs.length; i++) {
 			String[] familyQualifier = colPairs[i].split(":");
@@ -82,7 +92,7 @@ public class HBaseMultiScanLoader extends LoadFunc {
 		
 		Calendar startCal = Calendar.getInstance();
 		Calendar endCal = Calendar.getInstance();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+		SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
 		
 		try {
 			startCal.setTime(sdf.parse(startDate));
@@ -91,45 +101,17 @@ public class HBaseMultiScanLoader extends LoadFunc {
 			LOG.error("Error parsing start/stop dates", e);
 		}
 
-		scans = MultiScanTableMapReduceUtil.generateBytePrefixScans(startCal, endCal, "yyyyMMdd", columns, 100, true);
-	}
-	
-	/**
-	 * Constructor. Construct a HBase Table loader to load the cells of the
-	 * provided columns within the provided row ranges.
-	 * @param rowRanges scan row ranges given in comma-delimited list using hyphen between startRow and stopRow
-	 * @param columnList columns given in a comma-delimited list using colon between family and qualifier
-	 */
-	public HBaseMultiScanLoader(String rowRanges, String columnList) {
-		String[] ranges = rowRanges.split(",");
-		scans = new Scan[ranges.length];
-		for (int i=0; i < ranges.length; i++) {
-			String[] startEnd = ranges[i].split("-");
-			if (startEnd.length == 2) {
-				Scan s = new Scan();
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("Using start key: " + startEnd[0] + " end key: " + startEnd[1]);
-				}
-				s.setStartRow(Bytes.toBytes(startEnd[0]));
-				s.setStopRow(Bytes.toBytes(startEnd[1]));
-				scans[i] = s;
-			}
-		}
-		
-		String[] colPairs = columnList.split(",");
-		for (int i=0; i < colPairs.length; i++) {
-			String[] familyQualifier = colPairs[i].split(":");
-			if (LOG.isDebugEnabled()) {
-				LOG.debug("Adding column to map: " + colPairs[i]);
-			}
-			if (familyQualifier.length == 2) {
-				columns.put(Bytes.toBytes(familyQualifier[0]), Bytes.toBytes(familyQualifier[1]));
-			} else {
-				columns.put(Bytes.toBytes(familyQualifier[0]), Bytes.toBytes(""));
-			}
+		boolean useHex = Boolean.parseBoolean(useHexSalts);
+		if (useHex) {
+		    scans = MultiScanTableMapReduceUtil.generateHexPrefixScans(startCal, endCal, dateFormat, columns, caching, false);
+		} else {
+		    scans = MultiScanTableMapReduceUtil.generateBytePrefixScans(startCal, endCal, dateFormat, columns, caching, false);
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see org.apache.pig.LoadFunc#getNext()
+	 */
 	@Override
 	public Tuple getNext() throws IOException {
 		try {
@@ -154,6 +136,9 @@ public class HBaseMultiScanLoader extends LoadFunc {
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see org.apache.pig.LoadFunc#getInputFormat()
+	 */
 	@Override
 	@SuppressWarnings("rawtypes")
 	public InputFormat getInputFormat() {
@@ -162,22 +147,40 @@ public class HBaseMultiScanLoader extends LoadFunc {
 		return inputFormat;
 	}
 
+	/* (non-Javadoc)
+	 * @see org.apache.pig.LoadFunc#prepareToRead(org.apache.hadoop.mapreduce.RecordReader, org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit)
+	 */
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void prepareToRead(RecordReader reader, PigSplit split) {
 		this.reader = reader;
 	}
 
+	/* (non-Javadoc)
+	 * @see org.apache.pig.LoadFunc#setLocation(java.lang.String, org.apache.hadoop.mapreduce.Job)
+	 */
 	@Override
     public void setLocation(String location, Job job) throws IOException {
+	    job.getConfiguration().setBoolean("pig.noSplitCombination", true);
+	    conf = job.getConfiguration();
+        HBaseConfiguration.addHbaseResources(conf);
+        
         if (location.startsWith("hbase://")) {
         	conf.set(MultiScanTableInputFormat.INPUT_TABLE, location.substring(8));
         } else {
         	conf.set(MultiScanTableInputFormat.INPUT_TABLE, location);
         }
+        
+        if (conf.get(MultiScanTableInputFormat.SCANS) != null) {
+            return;
+        }
+        
         conf.set(MultiScanTableInputFormat.SCANS, MultiScanTableMapReduceUtil.convertScanArrayToString(scans));
     }
 
+	/* (non-Javadoc)
+	 * @see org.apache.pig.LoadFunc#relativeToAbsolutePath(java.lang.String, org.apache.hadoop.fs.Path)
+	 */
 	@Override
 	public String relativeToAbsolutePath(String location, Path curDir) throws IOException {
 		return location;
