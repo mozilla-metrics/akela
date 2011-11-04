@@ -34,6 +34,8 @@ public class MapToJson extends EvalFunc<String> {
 
     private final ObjectMapper jsonMapper = new ObjectMapper();
     
+    @SuppressWarnings("unchecked")
+    @Override
     public String exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
             return null;

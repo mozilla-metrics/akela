@@ -17,7 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mozilla.pig.eval;
 
 import java.io.IOException;
@@ -41,6 +40,8 @@ public class Size extends EvalFunc<Long> {
 				n = ((DefaultTuple)obj).size();
 			} else if (obj instanceof DataBag) {
 				n = ((DataBag) obj).size();
+			} else if (obj instanceof String) {
+			    n = ((String) obj).length();
 			}
 		}
 		
