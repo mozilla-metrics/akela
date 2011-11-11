@@ -374,23 +374,6 @@
 			</exclusions>
 		</dependency>
 
-		<!-- Hive -->
-		<!-- We have customizations in these jars -->
-		<dependency>
-			<groupId>org.apache.hadoop.hive</groupId>
-			<artifactId>hive-exec</artifactId>
-			<version>0.7.0-cdh3u0</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/lib/hive-exec-0.7.0-cdh3u0.jar</systemPath>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.hadoop.hive</groupId>
-			<artifactId>hive-serde</artifactId>
-			<version>0.7.0-cdh3u0</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/lib/hive-serde-0.7.0-cdh3u0.jar</systemPath>
-		</dependency>
-
 	</dependencies>
 
 	<build>
