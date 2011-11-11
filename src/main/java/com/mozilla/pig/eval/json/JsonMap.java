@@ -20,6 +20,7 @@
  
 package com.mozilla.pig.eval.json;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ import org.codehaus.jackson.type.TypeReference;
 
 public class JsonMap extends EvalFunc<Map<String, Object>> {
 
-	public static enum ERRORS { JSONParseError, JSONMappingError };
+	public static enum ERRORS { JSONParseError, JSONMappingError, EOFError };
 	
 	private static final BagFactory bagFactory = BagFactory.getInstance();
 	private static final TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -102,6 +103,8 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
 			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
 		} catch(JsonMappingException e) {
 			pigLogger.warn(this, "JSON Mapping Error", ERRORS.JSONMappingError);
+		} catch(EOFException e) {
+		    pigLogger.warn(this, "Hit EOF unexpectedly", ERRORS.EOFError);
 		}
 		
 		return null;

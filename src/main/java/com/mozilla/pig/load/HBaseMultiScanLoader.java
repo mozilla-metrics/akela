@@ -68,7 +68,18 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	public HBaseMultiScanLoader(String startDate, String stopDate, String dateFormat, String columnList) {
 	    this(startDate, stopDate, dateFormat, columnList, 100, "false");
 	}
-	        
+	
+	/**
+	 * @param startDate
+	 * @param stopDate
+	 * @param dateFormat
+	 * @param columnList
+	 * @param useHexSalts
+	 */
+	public HBaseMultiScanLoader(String startDate, String stopDate, String dateFormat, String columnList, String useHexSalts) {
+	    this(startDate, stopDate, dateFormat, columnList, 100, useHexSalts);
+	}
+	
 	/**
 	 * @param startDate
 	 * @param stopDate
