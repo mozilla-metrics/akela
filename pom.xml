@@ -313,10 +313,8 @@
 		<!-- Thrift -->
 		<dependency>
 			<groupId>org.apache.thrift</groupId>
-			<artifactId>thrift</artifactId>
-			<version>0.2.0</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/lib/thrift-0.2.0.jar</systemPath>
+			<artifactId>libthrift</artifactId>
+			<version>0.8.0</version>
 		</dependency>
 
 		<!-- Riak -->
