@@ -65,7 +65,7 @@ import com.basho.riak.client.response.FetchResponse;
  * 
  * This should be invoked like so:
  * 
- * com.mozilla.hadoop.riak.RiakExportToHDFS 
+ * com.mozilla.hadoop.riak.RiakExportToHDFS2 
  *  -Dmapred.map.tasks=<number>
  *  -Dmapred.reduce.tasks=<number> 
  *  -Driak.servers=http://yourserver:8098/riak 

@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +42,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 
 import com.mozilla.util.DateUtil;
+import com.mozilla.util.Pair;
 
 public class MultiScanTableMapReduceUtil {
 
@@ -127,7 +128,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @param endDate
 	 * @return
 	 */
-	public static Scan[] generateScans(Calendar startCal, Calendar endCal, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+	public static Scan[] generateScans(Calendar startCal, Calendar endCal, List<Pair<String,String>> columns, int caching, boolean cacheBlocks) {
 		return generateHexPrefixScans(startCal, endCal, "yyMMdd", columns, caching, cacheBlocks);
 	}
 	
@@ -141,7 +142,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @param cacheBlocks
 	 * @return
 	 */
-	public static Scan[] generateHexPrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+	public static Scan[] generateHexPrefixScans(Calendar startCal, Calendar endCal, String dateFormat, List<Pair<String,String>> columns, int caching, boolean cacheBlocks) {
 		ArrayList<Scan> scans = new ArrayList<Scan>();		
 		String[] salts = new String[16];
 		for (int i=0; i < 16; i++) {
@@ -160,8 +161,8 @@ public class MultiScanTableMapReduceUtil {
 				s.setCacheBlocks(cacheBlocks);
 				
 				// add columns
-				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
-					s.addColumn(col.getKey(), col.getValue());
+				for (Pair<String,String> pair : columns) {
+					s.addColumn(pair.getFirst().getBytes(), pair.getSecond().getBytes());
 				}
 				
 				s.setStartRow(Bytes.toBytes(salts[i] + String.format("%06d", d)));
@@ -190,7 +191,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @param cacheBlocks
 	 * @return
 	 */
-	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks) {
+	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, List<Pair<String,String>> columns, int caching, boolean cacheBlocks) {
 	    return generateBytePrefixScans(startCal, endCal, dateFormat, columns, caching, cacheBlocks, 1);
 	}
 	
@@ -205,7 +206,7 @@ public class MultiScanTableMapReduceUtil {
 	 * @param batch
 	 * @return
 	 */
-	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, Map<byte[], byte[]> columns, int caching, boolean cacheBlocks, int batch) {
+	public static Scan[] generateBytePrefixScans(Calendar startCal, Calendar endCal, String dateFormat, List<Pair<String,String>> columns, int caching, boolean cacheBlocks, int batch) {
 		ArrayList<Scan> scans = new ArrayList<Scan>();
 		
 		SimpleDateFormat rowsdf = new SimpleDateFormat(dateFormat);
@@ -223,9 +224,9 @@ public class MultiScanTableMapReduceUtil {
 				    s.setBatch(batch);
 				}
 				// add columns
-				for (Map.Entry<byte[], byte[]> col : columns.entrySet()) {
-					s.addColumn(col.getKey(), col.getValue());
-				}
+				for (Pair<String,String> pair : columns) {
+                    s.addColumn(pair.getFirst().getBytes(), pair.getSecond().getBytes());
+                }
 				
 				temp[0] = b;
 				s.setStartRow(Bytes.add(temp , Bytes.toBytes(String.format("%06d", d))));

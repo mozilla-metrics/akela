@@ -22,9 +22,9 @@ package com.mozilla.pig.load;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -46,6 +45,7 @@ import org.apache.pig.data.TupleFactory;
 
 import com.mozilla.hadoop.hbase.mapreduce.MultiScanTableInputFormat;
 import com.mozilla.hadoop.hbase.mapreduce.MultiScanTableMapReduceUtil;
+import com.mozilla.util.Pair;
 
 /**
  * A Pig 0.7+ loader for HBase tables using MultiScanTableInputFormat
@@ -55,7 +55,7 @@ public class HBaseMultiScanLoader extends LoadFunc {
 	private Configuration conf = new Configuration();
 	private RecordReader<ImmutableBytesWritable,Result> reader;
 	private Scan[] scans;
-	private Map<byte[], byte[]> columns = new HashMap<byte[], byte[]>(); // family:qualifier
+	private List<Pair<String,String>> columns = new ArrayList<Pair<String,String>>(); // family:qualifier
 	
 	private static final Log LOG = LogFactory.getLog(HBaseMultiScanLoader.class);
 
@@ -95,9 +95,9 @@ public class HBaseMultiScanLoader extends LoadFunc {
 				LOG.debug("Adding column to map: " + colPairs[i]);
 			}
 			if (familyQualifier.length == 2) {
-				columns.put(Bytes.toBytes(familyQualifier[0]), Bytes.toBytes(familyQualifier[1]));
+				columns.add(new Pair<String,String>(familyQualifier[0], familyQualifier[1]));
 			} else {
-				columns.put(Bytes.toBytes(familyQualifier[0]), Bytes.toBytes(""));
+			    columns.add(new Pair<String,String>(familyQualifier[0], ""));
 			}
 		}
 		
@@ -132,8 +132,8 @@ public class HBaseMultiScanLoader extends LoadFunc {
 				Tuple tuple = TupleFactory.getInstance().newTuple(columns.size()+1);
 				tuple.set(0, new String(rowKey.get()));
 				int i = 1;
-				for (Map.Entry<byte[], byte[]> entry : columns.entrySet()) {
-					byte[] v = result.getValue(entry.getKey(), entry.getValue());
+				for (Pair<String,String> pair : columns) {
+					byte[] v = result.getValue(pair.getFirst().getBytes(), pair.getSecond().getBytes());
 					if (v != null) {
 						tuple.set(i, new DataByteArray(v));
 					}

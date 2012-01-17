@@ -100,9 +100,9 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
 			Map<String,Object> values = jsonMapper.readValue((String)input.get(0), new TypeReference<Map<String,Object>>() { });
 			return makeSafe(values);
 		} catch(JsonParseException e) {
-			pigLogger.warn(this, "JSON Parse Error", ERRORS.JSONParseError);
+			pigLogger.warn(this, "JSON Parse Error: " + e.getMessage(), ERRORS.JSONParseError);
 		} catch(JsonMappingException e) {
-			pigLogger.warn(this, "JSON Mapping Error", ERRORS.JSONMappingError);
+			pigLogger.warn(this, "JSON Mapping Error: " + e.getMessage(), ERRORS.JSONMappingError);
 		} catch(EOFException e) {
 		    pigLogger.warn(this, "Hit EOF unexpectedly", ERRORS.EOFError);
 		}

@@ -23,16 +23,32 @@ package com.mozilla.pig.eval;
 import java.io.IOException;
 
 import org.apache.pig.EvalFunc;
+import org.apache.pig.data.DataByteArray;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 
 public class BytesSize extends EvalFunc<Long> {
 
 	public Long exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0) {
+		if (input == null || input.size() == 0 || input.isNull()) {
 			return 0L;
 		}
 
-		return input.getMemorySize();
+		long bytesSize = 0L;
+		switch(input.getType(0)) {
+		    case DataType.BYTEARRAY:
+		        DataByteArray dba = (DataByteArray)input.get(0);
+		        bytesSize = dba.size();
+		        break;
+		    case DataType.CHARARRAY:
+		        String str = (String)input.get(0);
+		        bytesSize = str.getBytes().length;
+		        break;
+		    default:
+		        break;
+		}
+		
+		return bytesSize;
 	}
 	
 }

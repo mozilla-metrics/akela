@@ -37,7 +37,7 @@ public class FormatDate extends EvalFunc<String> {
 		
 		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(0));
 		Calendar cal = Calendar.getInstance();
-		cal.setTimeInMillis((Long)input.get(1));
+		cal.setTimeInMillis(((Number)input.get(1)).longValue());
 		
 		return outputSdf.format(cal.getTime());
 	}

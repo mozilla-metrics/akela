@@ -90,8 +90,7 @@ public class SequenceFileDirectoryReader {
     
     public boolean next(Writable k, Writable v) throws IOException {
         if (curReader == null) {
-            boolean success = nextReader();
-            if (!success) {
+            if (!nextReader()) {
                 return false;
             }
         }
