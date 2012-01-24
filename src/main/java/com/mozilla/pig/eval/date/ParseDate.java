@@ -34,12 +34,12 @@ public class ParseDate extends EvalFunc<Long> {
 	
 	@Override
 	public Long exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0) {
+		if (input == null || input.size() < 2) {
 			return null;
 		}
 		
 		SimpleDateFormat inputSdf = new SimpleDateFormat((String)input.get(0));
-		long t = 0L;
+		Long t = null;
 		try {
 			Date d = inputSdf.parse((String)input.get(1));
 			t = d.getTime();

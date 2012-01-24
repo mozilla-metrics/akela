@@ -43,6 +43,6 @@ public class EncodeChromeUrl extends EvalFunc<String> {
 		
 		Matcher m = p.matcher((String)input.get(0));
 		
-		return m.replaceAll("chrome:%2F%2Fglobal%2Flocale%2Fintl.properties");
+		return m.replaceAll("chrome%3A%2F%2Fglobal%2Flocale%2Fintl.properties");
 	}
 }

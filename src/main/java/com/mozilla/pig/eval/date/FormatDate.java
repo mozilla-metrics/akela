@@ -29,14 +29,15 @@ import org.apache.pig.data.Tuple;
 
 public class FormatDate extends EvalFunc<String> {
 	
+    private Calendar cal = Calendar.getInstance();
+    
 	@Override
 	public String exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0) {
+		if (input == null || input.size() < 2) {
 			return null;
 		}
 		
-		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(0));
-		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(0));		
 		cal.setTimeInMillis(((Number)input.get(1)).longValue());
 		
 		return outputSdf.format(cal.getTime());
