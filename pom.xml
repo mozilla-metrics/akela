@@ -4,7 +4,7 @@
 
 	<groupId>com.mozilla</groupId>
 	<artifactId>akela</artifactId>
-	<version>0.2-SNAPSHOT</version>
+	<version>0.3-SNAPSHOT</version>
 
 	<name>akela</name>
 	<description>Mozilla's utility library for Hadoop, HBase, Pig, etc.</description>

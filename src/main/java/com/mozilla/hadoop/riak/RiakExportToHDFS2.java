@@ -128,9 +128,7 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
                 ro = fr.getObject();
                 Date lastModified = ro.getLastmodAsDate();
                 outputKey.set(sdf.format(lastModified));
-                // This is less generic for others but we are using this data in Hive
-                // so output the riak key, last modified (in seconds) and the actual value as the output value
-                outputValue.set(riakKey + VALUE_DELIMITER + (lastModified.getTime() / 1000L) + VALUE_DELIMITER + ro.getValue());
+                outputValue.set(ro.getValue());
                 context.getCounter(ReportStats.RIAK_KEY_COUNT).increment(1L);
                 context.write(outputKey, outputValue);
             }
@@ -149,7 +147,6 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
         
         private FileSystem hdfs;
         private String baseDir;
-        private Pattern riakKeyPattern;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -158,7 +155,6 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
             Configuration conf = context.getConfiguration();
             hdfs = FileSystem.get(conf);
             baseDir = conf.get(RIAK_EXPORT_OUTPUT_PATH);
-            riakKeyPattern = Pattern.compile("([^" + VALUE_DELIMITER + "]+)" + VALUE_DELIMITER);
         }
         
         /* (non-Javadoc)
@@ -173,15 +169,10 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
                 Text outputKey = new Text();
                 while (iter.hasNext()) {
                     Text v = iter.next();
-                    Matcher m = riakKeyPattern.matcher(v.toString());
-                    if (m.find() && m.groupCount() == 1) {
-                        String riakKey = m.group(1);
-                        outputKey.set(riakKey);
-                        writer.append(outputKey, v);
-                        context.write(outputKey, NullWritable.get());
-                    } else {
-                        context.getCounter(ReportStats.RIAK_KEY_NOT_FOUND).increment(1L);
-                    }
+                    outputKey.set(UUID.randomUUID().toString());
+                    writer.append(outputKey, v);
+                    context.write(outputKey, NullWritable.get());
+                    context.getCounter(ReportStats.RIAK_KEY_NOT_FOUND).increment(1L);
                 }
             } finally {
                 if (writer != null) {
