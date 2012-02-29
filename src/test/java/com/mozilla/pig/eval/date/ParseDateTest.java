@@ -14,7 +14,9 @@ import org.junit.Test;
 
 public class ParseDateTest {
 
-    private ParseDate parseDate = new ParseDate();
+    private static final String TIME_FORMAT = "yyyyMMdd HH:mm:ss:S";
+    
+    private ParseDate parseDate = new ParseDate(TIME_FORMAT);
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
     @Test
@@ -36,9 +38,8 @@ public class ParseDateTest {
         
         Calendar cal = Calendar.getInstance();
         long inputTimeMillis = cal.getTimeInMillis();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd HH:mm:ss:S");
-        
-        input.append("yyyyMMdd HH:mm:ss:S");
+        SimpleDateFormat sdf = new SimpleDateFormat(TIME_FORMAT);
+ 
         input.append(sdf.format(cal.getTime()));
         
         Long outputTimeMillis = parseDate.exec(input);

@@ -20,6 +20,7 @@
 package com.mozilla.pig.eval;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.DataBag;
@@ -28,7 +29,8 @@ import org.apache.pig.data.Tuple;
 
 public class Size extends EvalFunc<Long> {
 
-	public Long exec(Tuple input) throws IOException {
+	@SuppressWarnings("rawtypes")
+    public Long exec(Tuple input) throws IOException {
 		if (input == null) {
 			return null;
 		}
@@ -39,9 +41,11 @@ public class Size extends EvalFunc<Long> {
 			if (obj instanceof DefaultTuple) {
 				n = ((DefaultTuple)obj).size();
 			} else if (obj instanceof DataBag) {
-				n = ((DataBag) obj).size();
+				n = ((DataBag)obj).size();
 			} else if (obj instanceof String) {
-			    n = ((String) obj).length();
+			    n = ((String)obj).length();
+			} else if (obj instanceof Map) {
+			    n = ((Map)obj).size();
 			}
 		}
 		

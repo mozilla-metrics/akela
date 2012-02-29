@@ -32,16 +32,21 @@ public class ParseDate extends EvalFunc<Long> {
 
 	public static enum ERRORS { DateParseError };
 	
+	private SimpleDateFormat sdf;
+	
+	public ParseDate(String dateFormat) {
+	    sdf = new SimpleDateFormat(dateFormat);
+	}
+	
 	@Override
 	public Long exec(Tuple input) throws IOException {
-		if (input == null || input.size() < 2) {
+		if (input == null || input.size() == 0) {
 			return null;
 		}
 		
-		SimpleDateFormat inputSdf = new SimpleDateFormat((String)input.get(0));
 		Long t = null;
 		try {
-			Date d = inputSdf.parse((String)input.get(1));
+			Date d = sdf.parse((String)input.get(0));
 			t = d.getTime();
 		} catch (ParseException e) {
 			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
@@ -49,4 +54,5 @@ public class ParseDate extends EvalFunc<Long> {
 		
 		return t;
 	}
+	
 }

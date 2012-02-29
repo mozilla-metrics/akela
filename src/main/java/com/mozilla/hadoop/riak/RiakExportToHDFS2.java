@@ -31,8 +31,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,6 +45,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -81,8 +80,6 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
     private static final String RIAK_BUCKET = "riak.bucket";
     private static final String RIAK_SERVERS = "riak.servers";
     private static final String RIAK_EXPORT_OUTPUT_PATH = "riakexport.output.path";
-    
-    private static final String VALUE_DELIMITER = "\u0001";
     
     private Configuration conf;
     
@@ -342,8 +339,11 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
         }
         
         conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+        conf.setBoolean("mapred.compress.map.output", true);
+        conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
         
         Job job = new Job(getConf());
+
         job.setJobName(NAME);
         job.setJarByClass(RiakExportToHDFS2.class);
     
@@ -360,7 +360,7 @@ private static final Logger LOG = Logger.getLogger(RiakExportToHDFS2.class);
             System.out.println("Adding input path: " + source.toString());
             FileInputFormat.addInputPath(job, source);
         }
-    
+        
         job.setOutputFormatClass(TextOutputFormat.class);
         TextOutputFormat.setOutputPath(job, new Path(outputPath + "-mr-out"));
         
