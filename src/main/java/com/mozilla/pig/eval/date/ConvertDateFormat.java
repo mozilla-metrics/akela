@@ -32,17 +32,23 @@ public class ConvertDateFormat extends EvalFunc<String> {
 
 	public static enum ERRORS { DateParseError };
 	
+	private SimpleDateFormat inputSdf;
+	private SimpleDateFormat outputSdf;
+	
+	public ConvertDateFormat(String inputDateFormat, String outputDateFormat) {
+	    this.inputSdf = new SimpleDateFormat(inputDateFormat);
+	    this.outputSdf = new SimpleDateFormat(outputDateFormat);
+	}
+	
 	@Override
 	public String exec(Tuple input) throws IOException {
-		if (input == null || input.size() < 3) {
+		if (input == null || input.size() == 0) {
 			return null;
 		}
-		
-		SimpleDateFormat inputSdf = new SimpleDateFormat((String)input.get(0));
-		SimpleDateFormat outputSdf = new SimpleDateFormat((String)input.get(1));
+
 		String s = null;
 		try {
-			Date d = inputSdf.parse((String)input.get(2));
+			Date d = inputSdf.parse((String)input.get(0));
 			s = outputSdf.format(d);
 		} catch (ParseException e) {
 			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);

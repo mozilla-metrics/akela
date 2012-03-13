@@ -14,7 +14,7 @@ import org.junit.Test;
 
 public class ConvertDateFormatTest {
     
-    private ConvertDateFormat convDateFormat = new ConvertDateFormat();
+    private ConvertDateFormat convDateFormat = new ConvertDateFormat("yyyyMMdd", "yyyy-MM-dd");
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
     @Test
@@ -39,13 +39,11 @@ public class ConvertDateFormatTest {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String inputDateStr = sdf.format(cal.getTime());
         
-        input.append("yyyyMMdd");
-        input.append("yyMMdd");
         input.append(inputDateStr);
         
         String outputDateStr = convDateFormat.exec(input);
         assertNotNull(outputDateStr);
-        assertEquals(outputDateStr, "110123");
+        assertEquals(outputDateStr, "2011-01-23");
     }
     
 }
