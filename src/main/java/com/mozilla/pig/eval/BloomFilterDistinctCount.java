@@ -11,19 +11,33 @@ import org.apache.pig.data.Tuple;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 
+/**
+ * BloomFilterDistinctCount is designed to be a way to get a count of distinct items
+ * as they pass through while using a minimal amount of memory. This should only be used if 
+ * you have no other choice and if you are have out of memory issues during bag spills.
+ * 
+ * You can compensate somewhat, for the probabilistic nature of bloom filters by adjusting your
+ * counts after the fact based on your n and p values. You should also keep in mind that the lesser
+ * the p value; you will gain more accuracy, but at a considerable CPU cost if you have more than a
+ * few hashes to perform.
+ * 
+ * Refer to {@link http://hur.st/bloomfilter} calculator as a way to see the effects of n and p values.
+ * Take particular note of what the resulting k value is. If its greater than 10 you are likely entering
+ * a world of pain.
+ * 
+ * Example for expecting 1 million items at a 0.001 probablity of a false positive:
+ * 
+ * define DistinctCount com.mozilla.pig.eval.BloomFilterDistinctCount(1000000, 0.001);
+ * 
+ */
 public class BloomFilterDistinctCount extends EvalFunc<Integer> {
 
     private int n;
-//    private int k;
-//    private int m;
     private double p;
     
     public BloomFilterDistinctCount(String n, String p) {
         this.n = Integer.parseInt(n);
         this.p = Double.parseDouble(p);
-//        int m = (int)Math.ceil((n * Math.log(p)) / Math.log(1.0 / (Math.pow(2.0, Math.log(2.0)))));
-//        k = (int)Math.round(Math.log(2.0) * m / n);
-        
     }
     
     @Override
@@ -53,39 +67,5 @@ public class BloomFilterDistinctCount extends EvalFunc<Integer> {
 
         return uniq;
     }
-    
-//    public static void main(String[] args) {
-//        BloomFilter<CharSequence> filter = BloomFilter.create(Funnels.stringFunnel(), 10000, 0.000001d);
-//        Set<String> added = new HashSet<String>();
-//        Set<String> notAdded = new HashSet<String>();
-//        int uniq = 0;
-//        int n = 20000;
-//        for (int i=0; i < n; i++) {
-//            String id = UUID.randomUUID().toString();
-//            if (!filter.mightContain(id)) {
-//                filter.put(id.toString());
-//                uniq++;
-//                added.add(id);
-//            } else {
-//                notAdded.add(id);
-//            }
-//        }
-//        
-//        for (int i=0; i < n; i++) {
-//            notAdded.add(UUID.randomUUID().toString());
-//        }
-//        
-//        System.out.println(String.format("uniq[%d] added.size[%d] notAdded.size[%d]", uniq, added.size(), notAdded.size()));
-//        
-//        for (String a : added) {
-//            if (!filter.mightContain(a)) {
-//                System.out.println("filter thinks it does not contain: " + a);
-//            }
-//        }
-//        for (String na : notAdded) {
-//            if (filter.mightContain(na)) {
-//                System.out.println("filter thinks it contains: " + na);
-//            }
-//        }
-//    }
+
 }

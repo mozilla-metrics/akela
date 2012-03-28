@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 Mozilla Foundation
+ * Copyright 2012 Mozilla Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,37 +25,21 @@ import java.util.regex.Pattern;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
 
-public class FindAll extends EvalFunc<Tuple> {
+public class Find extends EvalFunc<String> {
 
-	private static TupleFactory tupleFactory = TupleFactory.getInstance();
-	
-	private Pattern p;
-	
-	public FindAll(String pattern) {
-	    p = Pattern.compile(pattern);
-	}
-	
-	public Tuple exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0) {
-			return null;
-		}
-		
-		Matcher m = p.matcher((String)input.get(0));
-		if (!m.find()) {
-			return null;
-		} 
-		
-		Tuple result = tupleFactory.newTuple();
-		// Add the one we just found
-		result.append(m.group());
-		// Look for more
-		while (m.find()) {
-			result.append(m.group());
-		}
-		
-		return result;
-	}
-	
+    private Pattern p;
+    
+    public Find(String pattern) {
+        p = Pattern.compile(pattern);
+    }
+    
+    public String exec(Tuple input) throws IOException {
+        if (input == null || input.size() == 0) {
+            return null;
+        }
+        
+        Matcher m = p.matcher((String)input.get(0));
+        return m.find() ? m.group() : null;
+    }
 }
