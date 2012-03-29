@@ -26,11 +26,11 @@ import java.util.regex.Pattern;
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
 
-public class Find extends EvalFunc<String> {
+public class FindOrReturn extends EvalFunc<String> {
 
     private Pattern p;
     
-    public Find(String pattern) {
+    public FindOrReturn(String pattern) {
         p = Pattern.compile(pattern);
     }
     
@@ -39,7 +39,8 @@ public class Find extends EvalFunc<String> {
             return null;
         }
         
-        Matcher m = p.matcher((String)input.get(0));
-        return m.find() ? m.group() : null;
+        String s = (String)input.get(0);
+        Matcher m = p.matcher(s);
+        return m.find() ? m.group() : s;
     }
 }
