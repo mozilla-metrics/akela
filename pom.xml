@@ -31,6 +31,10 @@
 
 	<repositories>
 		<repository>
+	      <id>mozilla-metrics-releases</id>
+	      <url>http://mozilla-metrics.github.com/maven2/releases</url>
+	    </repository>
+		<repository>
 	      <id>mozilla-metrics-snapshots</id>
 	      <url>http://mozilla-metrics.github.com/maven2/snapshots</url>
 	    </repository>
@@ -370,6 +374,13 @@
 					<groupId>com.cloudera.cdh</groupId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		
+		<!-- GeoIP -->
+		<dependency>
+			<groupId>com.maxmind</groupId>
+			<artifactId>maxmind-geoip</artifactId>
+			<version>1.2.5</version>
 		</dependency>
 		
 	</dependencies>
