@@ -1,5 +1,5 @@
 /**
- * Copyright 2011 Mozilla Foundation
+ * Copyright 2012 Mozilla Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,22 +25,15 @@ import java.util.Map;
 import org.apache.pig.FilterFunc;
 import org.apache.pig.data.Tuple;
 
-/**
- * Determines if the given map has contains the given key
- */
-public class ContainsKey extends FilterFunc {
+public class IsMap extends FilterFunc {
 
-    @SuppressWarnings("rawtypes")
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        if (input == null || input.size() < 2) {
+        if (input == null || input.size() == 0) {
             return false;
         }
 
-        Map m = (Map)input.get(0);
-        Object k = input.get(1);
-
-        return m.containsKey(k);
+        return (input.get(0) instanceof Map);
     }
 
 }
