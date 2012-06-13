@@ -129,8 +129,8 @@ public class HBaseMultiScanLoader extends LoadFunc {
 			if (reader.nextKeyValue()) {
 				ImmutableBytesWritable rowKey = reader.getCurrentKey();
 				Result result = reader.getCurrentValue();
-				Tuple tuple = TupleFactory.getInstance().newTuple(columns.size()+1);
-				tuple.set(0, new String(rowKey.get()));
+				Tuple tuple = TupleFactory.getInstance().newTuple(columns.size()+1); 
+				tuple.set(0, new DataByteArray(rowKey.get()));
 				int i = 1;
 				for (Pair<String,String> pair : columns) {
 					byte[] v = result.getValue(pair.getFirst().getBytes(), pair.getSecond().getBytes());
