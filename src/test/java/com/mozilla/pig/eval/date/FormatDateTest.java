@@ -13,17 +13,18 @@ import org.junit.Test;
 
 public class FormatDateTest {
 
-    private FormatDate formatDate = new FormatDate();
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
     @Test
     public void testExec1() throws IOException {
+        FormatDate formatDate = new FormatDate("yyyyMMdd");
         String outputDateStr = formatDate.exec(null);
         assertNull(outputDateStr);
     }
 
     @Test
     public void testExec2() throws IOException {
+        FormatDate formatDate = new FormatDate("yyyyMMdd");
         Tuple input = tupleFactory.newTuple();
         String outputDateStr = formatDate.exec(input);
         assertNull(outputDateStr);
@@ -31,12 +32,13 @@ public class FormatDateTest {
 
     @Test
     public void testExec3() throws IOException {
+        FormatDate formatDate = new FormatDate("yyyyMMdd");
+        
         Tuple input = tupleFactory.newTuple();
         
         Calendar cal = Calendar.getInstance();
         cal.set(2011, Calendar.JANUARY, 23);
         
-        input.append("yyyyMMdd");
         input.append(cal.getTimeInMillis());
         
         String outputDateStr = formatDate.exec(input);
