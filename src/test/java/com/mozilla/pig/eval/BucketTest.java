@@ -17,45 +17,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.regex;
+package com.mozilla.pig.eval;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.URLEncoder;
 
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.junit.Test;
 
-public class EncodeChromeUrlTest {
+public class BucketTest {
 
-    private EncodeChromeUrl encoder = new EncodeChromeUrl();
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
     @Test
-    public void testExec1() throws IOException {
-        String outputDateStr = encoder.exec(null);
-        assertNull(outputDateStr);
-    }
-
-    @Test
-    public void testExec2() throws IOException {
-        Tuple input = tupleFactory.newTuple();
-        String outputDateStr = encoder.exec(input);
-        assertNull(outputDateStr);
-    }
-
-    @Test
-    public void testExec3() throws IOException {
-        Tuple input = tupleFactory.newTuple();
-        String inputStr = "foochrome://global/locale/intl.propertiesbar";
-        input.append(inputStr);
-        String encodedStr = URLEncoder.encode(inputStr, "UTF-8");
+    public void testConstructor() throws IOException {
+        boolean exception = false;
+        try {
+            Bucket bucket = new Bucket();
+        } catch (IllegalArgumentException e) {
+            exception = true;
+        }
         
-        String outputStr = encoder.exec(input);
-        assertEquals(encodedStr, outputStr);
+        assertTrue(exception);
     }
     
+    @Test
+    public void testExec2() throws IOException {
+        Bucket bucket = new Bucket("1", "5", "8", "13");
+        
+        Tuple input = tupleFactory.newTuple(1);
+        input.set(0, 0);
+        assertEquals(1L, (int)bucket.exec(input));
+        
+        input.set(0, 2);
+        assertEquals(5L, (int)bucket.exec(input));
+        
+        input.set(0, 5);
+        assertEquals(5L, (int)bucket.exec(input));
+        
+        input.set(0, 16);
+        assertEquals(13L, (int)bucket.exec(input));
+    }
 }

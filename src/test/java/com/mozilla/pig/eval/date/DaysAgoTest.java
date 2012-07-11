@@ -17,45 +17,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.regex;
+package com.mozilla.pig.eval.date;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
-import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.junit.Test;
 
-public class EncodeChromeUrlTest {
+public class DaysAgoTest {
 
-    private EncodeChromeUrl encoder = new EncodeChromeUrl();
+    private static final String TIME_FORMAT = "yyyyMMdd";
+    
+    private DaysAgo daysAgo = new DaysAgo(TIME_FORMAT);
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
     @Test
     public void testExec1() throws IOException {
-        String outputDateStr = encoder.exec(null);
-        assertNull(outputDateStr);
+        Integer deltaDays = daysAgo.exec(null);
+        assertNull(deltaDays);
     }
 
     @Test
     public void testExec2() throws IOException {
-        Tuple input = tupleFactory.newTuple();
-        String outputDateStr = encoder.exec(input);
-        assertNull(outputDateStr);
-    }
-
-    @Test
-    public void testExec3() throws IOException {
-        Tuple input = tupleFactory.newTuple();
-        String inputStr = "foochrome://global/locale/intl.propertiesbar";
-        input.append(inputStr);
-        String encodedStr = URLEncoder.encode(inputStr, "UTF-8");
+        SimpleDateFormat sdf = new SimpleDateFormat(TIME_FORMAT);
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -1);
         
-        String outputStr = encoder.exec(input);
-        assertEquals(encodedStr, outputStr);
+        Tuple input = tupleFactory.newTuple(1);
+        
+        input.set(0, sdf.format(cal.getTime()));
+        Integer deltaDays = daysAgo.exec(input);
+        assertEquals(1, (int)deltaDays);
+        
+        cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -30);
+        input.set(0, sdf.format(cal.getTime()));
+        deltaDays = daysAgo.exec(input);
+        assertEquals(30, (int)deltaDays);
     }
     
 }
