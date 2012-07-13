@@ -17,13 +17,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mozilla.util;
+
+import static java.util.Calendar.DATE;
+import static java.util.Calendar.HOUR_OF_DAY;
+import static java.util.Calendar.MILLISECOND;
+import static java.util.Calendar.MINUTE;
+import static java.util.Calendar.SECOND;
+import static java.util.Calendar.WEEK_OF_YEAR;
 
 import java.util.Calendar;
 
 public class DateUtil {
 
+    public static long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
+    public static long WEEK_IN_MILLIS = DAY_IN_MILLIS * 7;
+    
 	/**
 	 * Get the first moment in time for the given time and resolution
 	 * @param time
@@ -35,14 +44,14 @@ public class DateUtil {
 		cal.setTimeInMillis(time);
 		
 		switch (resolution) {
-			case Calendar.DATE:
-				cal.set(Calendar.HOUR, 0);
-			case Calendar.HOUR:
-				cal.set(Calendar.MINUTE, 0);
-			case Calendar.MINUTE:
-				cal.set(Calendar.SECOND, 0);
-			case Calendar.SECOND:
-				cal.set(Calendar.MILLISECOND, 0);
+			case DATE:
+				cal.set(HOUR_OF_DAY, 0);
+			case HOUR_OF_DAY:
+				cal.set(MINUTE, 0);
+			case MINUTE:
+				cal.set(SECOND, 0);
+			case SECOND:
+				cal.set(MILLISECOND, 0);
 			default:
 				break;
 		}
@@ -61,14 +70,14 @@ public class DateUtil {
 		cal.setTimeInMillis(time);
 		
 		switch (resolution) {
-			case Calendar.DATE:
-				cal.set(Calendar.HOUR, 23);
-			case Calendar.HOUR:
-				cal.set(Calendar.MINUTE, 59);
-			case Calendar.MINUTE:
-				cal.set(Calendar.SECOND, 59);
-			case Calendar.SECOND:
-				cal.set(Calendar.MILLISECOND, 999);
+			case DATE:
+				cal.set(HOUR_OF_DAY, 23);
+			case HOUR_OF_DAY:
+				cal.set(MINUTE, 59);
+			case MINUTE:
+				cal.set(SECOND, 59);
+			case SECOND:
+				cal.set(MILLISECOND, 999);
 			default:
 				break;
 		}
@@ -76,4 +85,26 @@ public class DateUtil {
 		return cal.getTimeInMillis();
 	}
 	
+	/**
+	 * Get the time difference in the specified deltaUnit between the start and end time
+	 * @param start
+	 * @param end
+	 * @param deltaUnit
+	 * @return
+	 */
+	public static long getTimeDelta(long start, long end, int deltaUnit) {
+	    long delta = 0;
+	    switch (deltaUnit) {
+	        case DATE:
+	            delta = (end - start) / 86400000;
+	            break;
+	        case WEEK_OF_YEAR:
+	            delta = (end - start) / 604800000;
+	            break;
+	        default:
+	            break;
+	    }
+	    
+	    return delta;
+	}
 }
