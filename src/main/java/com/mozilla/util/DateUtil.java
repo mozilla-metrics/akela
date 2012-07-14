@@ -96,10 +96,10 @@ public class DateUtil {
 	    long delta = 0;
 	    switch (deltaUnit) {
 	        case DATE:
-	            delta = (end - start) / 86400000;
+	            delta = (end - start) / DAY_IN_MILLIS;
 	            break;
 	        case WEEK_OF_YEAR:
-	            delta = (end - start) / 604800000;
+	            delta = (end - start) / WEEK_IN_MILLIS;
 	            break;
 	        default:
 	            break;

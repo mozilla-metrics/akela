@@ -19,11 +19,10 @@
  */
 package com.mozilla.pig.eval.date;
 
-import static java.util.Calendar.DATE;
-
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import org.apache.pig.EvalFunc;
@@ -31,33 +30,36 @@ import org.apache.pig.data.Tuple;
 
 import com.mozilla.util.DateUtil;
 
-public class DaysAgo extends EvalFunc<Integer> {
+public class TimeDelta  extends EvalFunc<Long> {
 
     public static enum ERRORS { DateParseError };
     
     private SimpleDateFormat sdf;
     private long currentDay;
+    private int deltaUnit;
     
-    public DaysAgo(String dateFormat) {
+    public TimeDelta(String day, String dateFormat, String deltaUnitStr) throws ParseException {
         sdf = new SimpleDateFormat(dateFormat);
-        currentDay = DateUtil.getTimeAtResolution(System.currentTimeMillis(), DATE);
+        Date d = sdf.parse(day);
+        currentDay = DateUtil.getTimeAtResolution(d.getTime(), Calendar.DATE);
+        deltaUnit = Integer.parseInt(deltaUnitStr);
     }
     
     @Override
-    public Integer exec(Tuple input) throws IOException {
+    public Long exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
             return null;
         }
         
-        Integer daysAgo = null;
+        Long delta = null;
         try {
             Date d = sdf.parse((String)input.get(0));
-            daysAgo = (int)DateUtil.getTimeDelta(d.getTime(), currentDay, DATE);  
+            delta = DateUtil.getTimeDelta(d.getTime(), currentDay, deltaUnit); 
         } catch (ParseException e) {
             pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
         }
         
-        return daysAgo;
+        return delta;
     }
 
 }

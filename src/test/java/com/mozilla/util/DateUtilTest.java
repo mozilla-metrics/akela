@@ -19,10 +19,14 @@
  */
 package com.mozilla.util;
 
-import static org.junit.Assert.*;
+import static java.util.Calendar.DATE;
+import static java.util.Calendar.JULY;
+import static java.util.Calendar.MILLISECOND;
+import static java.util.Calendar.WEEK_OF_YEAR;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Calendar;
-import static java.util.Calendar.*;
+
 import org.junit.Test;
 
 public class DateUtilTest {
