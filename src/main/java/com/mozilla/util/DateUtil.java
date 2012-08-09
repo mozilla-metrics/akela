@@ -101,7 +101,10 @@ public class DateUtil {
 	        case WEEK_OF_YEAR:
 	            delta = (end - start) / WEEK_IN_MILLIS;
 	            break;
+	        case MILLISECOND:
+	            // pass through to default
 	        default:
+	            delta = (end - start);
 	            break;
 	    }
 	    

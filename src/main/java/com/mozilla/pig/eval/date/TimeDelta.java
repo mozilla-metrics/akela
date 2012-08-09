@@ -33,16 +33,27 @@ import com.mozilla.util.DateUtil;
 public class TimeDelta  extends EvalFunc<Long> {
 
     public static enum ERRORS { DateParseError };
-    
-    private SimpleDateFormat sdf;
-    private long currentDay;
+
     private int deltaUnit;
+    private boolean parseDate = false;
+    private SimpleDateFormat sdf;
     
-    public TimeDelta(String day, String dateFormat, String deltaUnitStr) throws ParseException {
-        sdf = new SimpleDateFormat(dateFormat);
-        Date d = sdf.parse(day);
-        currentDay = DateUtil.getTimeAtResolution(d.getTime(), Calendar.DATE);
+    public TimeDelta() {
+        deltaUnit = Calendar.MILLISECOND;
+    }
+    
+    public TimeDelta(String deltaUnitSr) throws ParseException {
+        this(deltaUnitSr, null);
+    }
+    
+    public TimeDelta(String deltaUnitStr, String dateFormat) throws ParseException {
+        // WEEK_OF_YEAR = 3
+        // DATE = 5
         deltaUnit = Integer.parseInt(deltaUnitStr);
+        if (dateFormat != null) {
+            parseDate = true;
+            sdf = new SimpleDateFormat(dateFormat);
+        }
     }
     
     @Override
@@ -50,15 +61,22 @@ public class TimeDelta  extends EvalFunc<Long> {
         if (input == null || input.size() == 0) {
             return null;
         }
-        
-        Long delta = null;
-        try {
-            Date d = sdf.parse((String)input.get(0));
-            delta = DateUtil.getTimeDelta(d.getTime(), currentDay, deltaUnit); 
-        } catch (ParseException e) {
-            pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
+
+        long delta = 0;
+        if (parseDate) {
+            try {
+                Date d1 = sdf.parse((String)input.get(0));
+                Date d2 = sdf.parse((String)input.get(1));
+                delta = DateUtil.getTimeDelta(d1.getTime(), d2.getTime(), deltaUnit);
+            } catch (ParseException e) {
+                pigLogger.warn(this, "Date parse error", ERRORS.DateParseError);
+            }
+        } else {
+            long t1 = ((Number)input.get(0)).longValue();
+            long t2 = ((Number)input.get(1)).longValue();
+            delta = DateUtil.getTimeDelta(t1, t2, deltaUnit);
         }
-        
+
         return delta;
     }
 

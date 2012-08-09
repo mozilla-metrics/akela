@@ -17,29 +17,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.regex;
+package com.mozilla.pig.filter.tuple;
+
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.junit.Test;
 
-public class Find extends EvalFunc<String> {
+public class ContainsTest {
 
-    private Pattern p;
+    private TupleFactory tupleFactory = TupleFactory.getInstance();
     
-    public Find(String pattern) {
-        p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-    }
-    
-    public String exec(Tuple input) throws IOException {
-        if (input == null || input.size() == 0 || input.get(0) == null) {
-            return null;
-        }
+    @Test
+    public void testExec1() throws IOException {
+        Tuple input = tupleFactory.newTuple(2);
+        Tuple items = tupleFactory.newTuple();
+        items.append(-1);
+        items.append(0);
+        items.append(1);
         
-        Matcher m = p.matcher((String)input.get(0));
-        return m.find() ? m.group() : null;
+        input.set(0, items);
+        input.set(1, 0);
+        
+        Contains c = new Contains();
+        boolean found = c.exec(input);
+        assertTrue(found);
     }
+    
 }

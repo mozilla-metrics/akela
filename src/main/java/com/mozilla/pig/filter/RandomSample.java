@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2012 Mozilla Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -17,29 +17,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mozilla.pig.eval.regex;
+package com.mozilla.pig.filter;
 
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Random;
 
-import org.apache.pig.EvalFunc;
+import org.apache.pig.FilterFunc;
 import org.apache.pig.data.Tuple;
 
-public class Find extends EvalFunc<String> {
+public class RandomSample extends FilterFunc {
 
-    private Pattern p;
+    private Random rand;
+    private double ratio;
     
-    public Find(String pattern) {
-        p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+    public RandomSample(String r) {
+        rand = new Random();
+        ratio = Double.parseDouble(r);
     }
     
-    public String exec(Tuple input) throws IOException {
-        if (input == null || input.size() == 0 || input.get(0) == null) {
-            return null;
-        }
-        
-        Matcher m = p.matcher((String)input.get(0));
-        return m.find() ? m.group() : null;
+    @Override
+    public Boolean exec(Tuple input) throws IOException {
+        return rand.nextDouble() <= ratio;
     }
+    
 }
