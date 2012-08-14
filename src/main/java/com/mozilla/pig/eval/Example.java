@@ -35,10 +35,9 @@ import org.apache.pig.data.DataType;
  * of that bag. It is intended for use when grouping a set of results and
  * you want a single example item in the final result set.
  */
-public final class Example extends EvalFunc<Tuple> implements Algebraic {
-
-    @Override
-    public Tuple exec(Tuple input) throws IOException
+public final class Example extends EvalFunc<Tuple> implements Algebraic
+{
+    static private Tuple realexec(Tuple input) throws IOException
     {
         DataBag bag = (DataBag) input.get(0);
         Iterator<Tuple> it = bag.iterator();
@@ -52,7 +51,23 @@ public final class Example extends EvalFunc<Tuple> implements Algebraic {
     }
 
     @Override
-    public Schema outputSchema(Schema input) {
+    public Tuple exec(Tuple input) throws IOException
+    {
+        return realexec(input);
+    }
+
+    static public class Sub extends EvalFunc<Tuple>
+    {
+        @Override
+        public Tuple exec(Tuple input) throws IOException
+        {
+            return realexec(input);
+        }
+    }
+
+    @Override
+    public Schema outputSchema(Schema input)
+    {
         try {
             if (input.size() != 1) {
                 return null;
@@ -73,7 +88,7 @@ public final class Example extends EvalFunc<Tuple> implements Algebraic {
 
     // We can use the same class in all cases since the input schema is the
     // same.
-    public String getInitial() { return this.getClass().getName(); }
-    public String getIntermed() { return this.getClass().getName(); }
-    public String getFinal() { return this.getClass().getName(); }
+    public String getInitial() { return Sub.class.getName(); }
+    public String getIntermed() { return Sub.class.getName(); }
+    public String getFinal() { return Sub.class.getName(); }
 }

@@ -36,11 +36,7 @@ public class ExampleTest {
     private BagFactory bagFactory = BagFactory.getInstance();
     
     @Test
-    public void testConstructor() throws IOException {
+    public void testInstantiate() throws IOException {
         Example e = new Example();
-    }
-    
-    @Test
-    public void testExec2() throws IOException {
     }
 }
