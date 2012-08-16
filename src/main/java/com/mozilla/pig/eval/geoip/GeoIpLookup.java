@@ -20,6 +20,8 @@
 package com.mozilla.pig.eval.geoip;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
@@ -32,11 +34,44 @@ public class GeoIpLookup extends EvalFunc<Tuple> {
 
     private static final String EMPTY_STRING = "";
     
+    private final String lookupFilename;
+
     private LookupService lookupService;
     private TupleFactory tupleFactory = TupleFactory.getInstance();
     
+    /**
+     * Create a IP -> Location mapper.
+     * Pig example:
+     *   DEFINE GeoIpLookup com.mozilla.pig.eval.geoip.GeoIpLookup('GeoIPCity.dat');
+     *   foo = LOAD ...
+     *   bar = foreach foo generate GeoIpLookup(ip_address) AS
+     *           location:tuple(country:chararray, country_code:chararray,
+     *             region:chararray, city:chararray,
+     *             postal_code:chararray, metro_code:int);
+     *
+     * This will expect a file in hdfs in /user/you/GeoIPCity.dat
+     *
+     * Using the getCacheFiles approach,y ou no longer need to specify the
+     *  -Dmapred.cache.archives
+     *  -Dmapred.create.symlink
+     * options to pig.
+     *
+     * @param filename Basename of the GeoIP Database file.  Should be located in your home dir in HDFS
+     * @throws IOException
+     */
     public GeoIpLookup(String filename) throws IOException {
-        lookupService = new LookupService(filename);
+        lookupFilename = filename;
+        lookupService = new LookupService(lookupFilename);
+    }
+
+    @Override
+    public List<String> getCacheFiles() {
+        List<String> cacheFiles = new ArrayList<String>(1);
+        // Note that this forces us to use basenames only.  If we need
+        // to support other paths, we either need two arguments in the
+        // constructor, or to parse the filename to extract the basename.
+        cacheFiles.add(lookupFilename + "#" + lookupFilename);
+        return cacheFiles;
     }
 
     @Override
