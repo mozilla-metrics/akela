@@ -37,16 +37,15 @@ public class Coalesce extends EvalFunc<Object> {
             return null;
         }
         
-        Object ret = null;
+        Object o = null;
         for (int i=0; i < input.size(); i++) {
-            Object o = input.get(i);
+            o = input.get(i);
             if (o != null) {
-                ret = o;
                 break;
             }
         }
         
-        return ret;
+        return o;
     }
 
     public Schema outputSchema(Schema input) {
