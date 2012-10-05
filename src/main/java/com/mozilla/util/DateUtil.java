@@ -110,4 +110,33 @@ public class DateUtil {
 	    
 	    return delta;
 	}
+	
+	/**
+	 * Iterate from startMillis to endMillis (including endMillis) in increments of incrementCount * incrementType
+	 * @param startMillis
+	 * @param endMillis
+	 * @param incrementType
+	 * @param incrementCount
+	 * @param iterator
+	 */
+	public static void iterateByTime(long startMillis, long endMillis, int incrementType, int incrementCount, DateIterator iterator) {
+	    Calendar start = Calendar.getInstance();
+        start.setTimeInMillis(startMillis);
+        Calendar end = Calendar.getInstance();
+        end.setTimeInMillis(endMillis);
+        while (!start.after(end)) {
+            iterator.see(start.getTimeInMillis());
+            start.add(incrementType, incrementCount);
+        }
+	}
+	
+	/**
+	 * Iterate from startMillis to endMillis (including endMillis) in increments of one day
+	 * @param startMillis
+	 * @param endMillis
+	 * @param iterator
+	 */
+    public static void iterateByDay(long startMillis, long endMillis, DateIterator iterator) {
+        iterateByTime(startMillis, endMillis, DATE, 1, iterator);
+    }
 }

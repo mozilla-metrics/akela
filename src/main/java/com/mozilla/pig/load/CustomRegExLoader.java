@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 Mozilla Foundation
+ * Copyright 2012 Mozilla Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,27 +17,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.mozilla.pig.load;
 
-package com.mozilla.util;
+import java.util.regex.Pattern;
 
-public class StringUtil {
+/**
+ * CustomRegExLoader lets you specify an arbitrary Regular Expression to use parsing lines.
+ */
+public class CustomRegExLoader extends RegExLoader {
 
-	public static boolean isBlank(String s) {
-		return (s == null || s.length() == 0 || s.trim().length() == 0);
-	}
-	
-	public static String join(String glue, String... bits) {
-	    if (bits == null)
-	        return null;
-	    if (bits.length == 0)
-	        return "";
+    private final Pattern customPattern;
 
-	    StringBuilder sb = new StringBuilder(bits[0]);
-	    for (int i = 1; i < bits.length; i++) {
-	        sb.append(glue);
-	        sb.append(bits[i]);
-	    }
-	    return sb.toString();
-	}
+    // Default to matching entire line.
+    public CustomRegExLoader() {
+        this.customPattern = Pattern.compile("^(.*)$");
+    }
+
+    public CustomRegExLoader(String aPattern) {
+        this.customPattern = Pattern.compile(aPattern);
+    }
+
+    @Override
+    public Pattern getPattern() {
+        return customPattern;
+    }
 
 }
