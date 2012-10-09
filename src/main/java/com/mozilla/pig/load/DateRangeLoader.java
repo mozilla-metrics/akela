@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.pig.LoadFunc;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
-import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
@@ -112,7 +111,7 @@ public class DateRangeLoader extends LoadFunc {
             if (val != null) {
                 String line = val.toString();
                 t = TupleFactory.getInstance().newTuple();
-                t.append(new DataByteArray(line));
+                t.append(line);
             }
         }
 
