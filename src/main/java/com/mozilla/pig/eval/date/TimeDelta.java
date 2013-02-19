@@ -58,7 +58,8 @@ public class TimeDelta  extends EvalFunc<Long> {
     
     @Override
     public Long exec(Tuple input) throws IOException {
-        if (input == null || input.size() == 0) {
+        if (input == null || input.size() < 2 || 
+            input.get(0) == null || input.get(1) == null) {
             return null;
         }
 

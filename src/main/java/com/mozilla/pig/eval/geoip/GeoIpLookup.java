@@ -51,7 +51,7 @@ public class GeoIpLookup extends EvalFunc<Tuple> {
      *
      * This will expect a file in hdfs in /user/you/GeoIPCity.dat
      *
-     * Using the getCacheFiles approach,y ou no longer need to specify the
+     * Using the getCacheFiles approach, you no longer need to specify the
      *  -Dmapred.cache.archives
      *  -Dmapred.create.symlink
      * options to pig.

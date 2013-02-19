@@ -19,24 +19,15 @@
  */
 package com.mozilla.pig.eval;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.BagFactory;
 import org.junit.Test;
 
 public class ExampleTest {
-
-    private TupleFactory tupleFactory = TupleFactory.getInstance();
-    private BagFactory bagFactory = BagFactory.getInstance();
     
     @Test
-    public void testInstantiate() throws IOException {
+    public void testConstructor() throws IOException {
         Example e = new Example();
     }
+    
 }

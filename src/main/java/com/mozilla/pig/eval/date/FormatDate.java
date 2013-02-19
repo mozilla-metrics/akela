@@ -38,7 +38,7 @@ public class FormatDate extends EvalFunc<String> {
     
 	@Override
 	public String exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0) {
+		if (input == null || input.size() == 0 || input.get(0) == null) {
 			return null;
 		}
 				

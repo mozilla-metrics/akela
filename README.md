@@ -11,6 +11,8 @@ This code is built with the following assumptions.  You may get mixed results if
 * [HBase](http://hbase.apache.org) 0.90+
 * [Pig](http://pig.apache.org) 0.9+
 * [Hive](https://github.com/xstevens/hive) 0.7 with [automatic promotion of certain types](https://github.com/xstevens/hive/commit/566ca633546e5231cf5ea20d554c1f61784f39e4)
+* [Jackson](https://github.com/FasterXML) 2.x (for all things JSON)
+	* We don't use anything fancy but fasterxml switch broke from 1.x packaging. You can probably fork and compile fairly easily if you want to use Jackson 1.x since that's what ships with Hadoop projects.
 
 ### Building ###
 To make a jar you can do:  
@@ -29,3 +31,4 @@ All aspects of this software written in Java are distributed under Apache Softwa
 
 * Xavier Stevens ([@xstevens](http://twitter.com/xstevens))
 * Daniel Einspanjer ([@deinspanjer](http://twitter/deinspanjer))
+* Mark Reid ([@reid_write](http://twitter.com/reid_write))
