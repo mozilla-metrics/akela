@@ -43,8 +43,8 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
     };
 
     private static final BagFactory bagFactory = BagFactory.getInstance();
-    private static final TupleFactory tupleFactory = TupleFactory.getInstance();
-    private final ObjectMapper jsonMapper = new ObjectMapper();
+    protected static final TupleFactory tupleFactory = TupleFactory.getInstance();
+    protected final ObjectMapper jsonMapper = new ObjectMapper();
 
     /**
      * Converts List objects to DataBag to keep Pig happy
@@ -78,7 +78,7 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
      * @return
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> makeSafe(Map<String, Object> m) {
+    protected Map<String, Object> makeSafe(Map<String, Object> m) {
         Map<String, Object> safeValues = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : m.entrySet()) {
             Object v = entry.getValue();
@@ -95,6 +95,7 @@ public class JsonMap extends EvalFunc<Map<String, Object>> {
         return safeValues;
     }
 
+    @Override
     public Map<String, Object> exec(Tuple input) throws IOException {
         if (input == null || input.size() == 0) {
             return null;
