@@ -71,6 +71,16 @@ public class TimeDeltaTest {
         input.set(1, sdf.format(end));
         deltaDays = daysAgo.exec(input);
         assertEquals(10, (long)deltaDays);
+
+        // Trigger the DST-change effect:
+        // Note that DST began on 20130310 in many parts of
+        // North America.
+        start = sdf.parse("20130305");
+        end = sdf.parse("20130315");
+        input.set(0, sdf.format(start));
+        input.set(1, sdf.format(end));
+        deltaDays = daysAgo.exec(input);
+        assertEquals(10, (long)deltaDays);
     }
     
 }
