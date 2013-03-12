@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -63,6 +64,13 @@ public class TimeDeltaTest {
         input.set(0, sdf.format(cal.getTime()));
         deltaDays = daysAgo.exec(input);
         assertEquals(30, (long)deltaDays);
+
+        Date start = sdf.parse("20130101");
+        Date end = sdf.parse("20130111");
+        input.set(0, sdf.format(start));
+        input.set(1, sdf.format(end));
+        deltaDays = daysAgo.exec(input);
+        assertEquals(10, (long)deltaDays);
     }
     
 }
