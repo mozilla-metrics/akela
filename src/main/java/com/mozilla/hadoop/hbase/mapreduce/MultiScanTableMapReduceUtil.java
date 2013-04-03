@@ -214,7 +214,7 @@ public class MultiScanTableMapReduceUtil {
 		
 		byte[] temp = new byte[1];
 		while (startCal.getTimeInMillis() < endTime) {		
-			for (byte b=Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+			for (int b=Byte.MIN_VALUE; b <= Byte.MAX_VALUE; b++) {
 			    int d = Integer.parseInt(rowsdf.format(startCal.getTime()));
 			    
 				Scan s = new Scan();
@@ -228,7 +228,7 @@ public class MultiScanTableMapReduceUtil {
                     s.addColumn(pair.getFirst().getBytes(), pair.getSecond().getBytes());
                 }
 				
-				temp[0] = b;
+				temp[0] = (byte) b;
 				s.setStartRow(Bytes.add(temp , Bytes.toBytes(String.format("%06d", d))));
 				s.setStopRow(Bytes.add(temp , Bytes.toBytes(String.format("%06d", d + 1))));
 				if (LOG.isDebugEnabled()) {
