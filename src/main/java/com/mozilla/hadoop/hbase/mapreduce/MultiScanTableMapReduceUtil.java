@@ -79,7 +79,9 @@ public class MultiScanTableMapReduceUtil {
 	    if (outputKeyClass != null) {
 	    	job.setMapOutputKeyClass(outputKeyClass);
 	    }
-	    job.setMapperClass(mapper);
+        if (mapper != null) {
+            job.setMapperClass(mapper);
+        }
 		job.getConfiguration().set(MultiScanTableInputFormat.INPUT_TABLE, table);
 		job.getConfiguration().set(MultiScanTableInputFormat.SCANS, convertScanArrayToString(scans));
 	}
