@@ -23,9 +23,12 @@ package com.mozilla.pig.eval.date;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
+
+import com.mozilla.pig.eval.date.ConvertDateFormat.ERRORS;
 
 public class FormatDate extends EvalFunc<String> {
 	
@@ -41,10 +44,16 @@ public class FormatDate extends EvalFunc<String> {
 		if (input == null || input.size() == 0 || input.get(0) == null) {
 			return null;
 		}
-				
-		cal.setTimeInMillis(((Number)input.get(0)).longValue());
+
+		String s = null;
+		try {
+			cal.setTimeInMillis(((Number)input.get(0)).longValue());
+			s = sdf.format(cal.getTime());
+		} catch (Exception e) {
+			warn("Date parse error: " + e, ERRORS.DateParseError);
+		}
 		
-		return sdf.format(cal.getTime());
+		return s;
 	}
 	
 }
