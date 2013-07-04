@@ -21,7 +21,6 @@ package com.mozilla.pig.eval.date;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -36,7 +35,7 @@ public class TimeDelta  extends EvalFunc<Long> {
 
     private int deltaUnit;
     private boolean parseDate = false;
-    private SimpleDateFormat sdf;
+	private String dateFormat;
     
     public TimeDelta() {
         deltaUnit = Calendar.MILLISECOND;
@@ -52,7 +51,7 @@ public class TimeDelta  extends EvalFunc<Long> {
         deltaUnit = Integer.parseInt(deltaUnitStr);
         if (dateFormat != null) {
             parseDate = true;
-            sdf = new SimpleDateFormat(dateFormat);
+            this.dateFormat = dateFormat;
         }
     }
     
@@ -66,8 +65,8 @@ public class TimeDelta  extends EvalFunc<Long> {
         Long delta = null;
         try {
         	if (parseDate) {
-        		Date d1 = sdf.parse((String)input.get(0));
-        		Date d2 = sdf.parse((String)input.get(1));
+        		Date d1 = DateUtil.parseAndCacheDate(dateFormat, (String)input.get(0));
+        		Date d2 = DateUtil.parseAndCacheDate(dateFormat, (String)input.get(1));
         		delta = DateUtil.getTimeDelta(d1.getTime(), d2.getTime(), deltaUnit);
         	} else {
         		long t1 = ((Number)input.get(0)).longValue();

@@ -26,12 +26,45 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.SECOND;
 import static java.util.Calendar.WEEK_OF_YEAR;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DateUtil {
 
     public static long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
     public static long WEEK_IN_MILLIS = DAY_IN_MILLIS * 7;
+    
+    private static ConcurrentHashMap<String, ConcurrentHashMap<String, Date>> parsedDatesMapByFormatMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, Date>>();
+    
+	/**
+	 * Parse a date string according to the format and cache the result
+	 * @param format
+	 * @param str
+	 * @throws ParseException 
+	 */
+    public static Date parseAndCacheDate(String format, String str) throws ParseException {
+    	if(format==null || str==null) {
+    		return null;
+    	}
+    		
+    	ConcurrentHashMap<String, Date> parsedDatesMap = parsedDatesMapByFormatMap.get(format);
+    	if(parsedDatesMap == null) {
+    		parsedDatesMap = new ConcurrentHashMap<String, Date>();
+    		parsedDatesMapByFormatMap.put(format, parsedDatesMap);
+    	}
+    	
+    	Date result = parsedDatesMap.get(str);
+    	if(result == null) {
+    		SimpleDateFormat sdf = new SimpleDateFormat(format);
+    		result = sdf.parse(str);
+    		parsedDatesMap.put(str, result);
+    	}
+    	
+    	return result;
+    }
     
 	/**
 	 * Get the first moment in time for the given time and resolution
