@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mozilla</groupId>
 	<artifactId>akela</artifactId>
-	<version>0.5-SNAPSHOT</version>
+	<version>0.6-SNAPSHOT</version>
 	<name>akela</name>
 	<description>Mozilla's utility library for Hadoop, HBase, Pig, etc.</description>
 	<url>https://github.com/mozilla-metrics/akela</url>
