@@ -30,7 +30,7 @@ import org.apache.pig.data.Tuple;
 public class BytesSize extends EvalFunc<Long> {
 
 	public Long exec(Tuple input) throws IOException {
-		if (input == null || input.size() == 0 || input.isNull()) {
+		if (input == null || input.size() == 0 ) {
 			return 0L;
 		}
 

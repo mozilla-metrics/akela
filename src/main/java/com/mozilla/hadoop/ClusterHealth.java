@@ -23,23 +23,21 @@ package com.mozilla.hadoop;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+
+import java.nio.ByteBuffer;
 
 
 public class ClusterHealth {
@@ -53,7 +51,7 @@ public class ClusterHealth {
             transport = new TSocket(host, 9090, 3000);
             Hbase.Client client = new Hbase.Client(new TBinaryProtocol(transport));
             transport.open();
-            client.getColumnDescriptors(META_TABLE_NAME);
+            client.getColumnDescriptors(ByteBuffer.wrap(META_TABLE_NAME));
             System.out.println(String.format("%s ThriftServer - [ ALIVE ]", new Object[] { host }));
             ret = true;
         } catch (TTransportException e) {
@@ -119,19 +117,19 @@ public class ClusterHealth {
 			ClusterStatus hcs = hbaseAdmin.getClusterStatus();
 			int regionsCount = hcs.getRegionsCount();
 			int requestsCount = hcs.getRequestsCount();
-			for (HServerInfo serverInfo : hcs.getServerInfo()) {
-				HServerLoad hsl = serverInfo.getLoad();
+			for (ServerName server : hcs.getServers()) {
+				HServerLoad hsl = hcs.getLoad(server);
 				float heapPercentage = ((float)hsl.getUsedHeapMB() / (float)hsl.getMaxHeapMB()) * 100.0f;
 				float regionsPercentage = regionsCount == 0 ? 0.0f : ((float)hsl.getNumberOfRegions() / (float)regionsCount) * 100.0f;
 				float requestsPercentage = requestsCount == 0 ? 0.0f : ((float)hsl.getNumberOfRequests() / (float)requestsCount) * 100.0f;
 				System.out.println(String.format("%s RegionServer - [ ALIVE ] - Memory Heap: (%d / %d MB) %.2f%%, Regions: (%d / %d) %.2f%%, Requests: (%d / %d) %.2f%%", 
-							  					 new Object[] { serverInfo.getHostname(), hsl.getUsedHeapMB(), hsl.getMaxHeapMB(), 
+							  					 new Object[] { server.getHostname(), hsl.getUsedHeapMB(), hsl.getMaxHeapMB(),
 											 	 heapPercentage, hsl.getNumberOfRegions(), regionsCount, regionsPercentage, hsl.getNumberOfRequests(), requestsCount, requestsPercentage }));
 			}
 			if (hcs.getDeadServers() > 0) {
 				retCode = 2;
-				for (String server : hcs.getDeadServerNames()) {
-					System.out.println(server + " RegionServer - [ DEAD ]");
+				for (ServerName server : hcs.getDeadServerNames()) {
+					System.out.println(server.getHostname() + " RegionServer - [ DEAD ]");
 				}
 			}
 			
