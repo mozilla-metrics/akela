@@ -21,7 +21,6 @@
 package com.mozilla.pig.eval.date;
 
 import java.io.IOException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -50,8 +49,8 @@ public class ConvertDateFormat extends EvalFunc<String> {
 		try {
 			Date d = inputSdf.parse((String)input.get(0));
 			s = outputSdf.format(d);
-		} catch (ParseException e) {
-			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
+		} catch (Exception e) {
+			warn("Date parse error: " + e, ERRORS.DateParseError);
 		}
 		
 		return s;

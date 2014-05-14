@@ -19,58 +19,54 @@
  */
 package com.mozilla.pig.eval.json;
 
-import java.util.HashMap;
-import java.util.List;
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.Map;
 
+import org.apache.pig.EvalFunc;
 import org.apache.pig.data.Tuple;
 
-public class JsonTupleMap extends JsonMap {
-    
-    /**
-     * Converts List objects to Tuple to keep Pig happy
-     * 
-     * @param l
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    private Tuple convertListToTuple(List<Object> l) {
-        Tuple t = tupleFactory.newTuple();
-        for (Object o : l) {
-            if (o instanceof List) {
-                t.append(convertListToTuple((List<Object>) o));
-            } else {
-                t.append(o);
-            }
-        }
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.mozilla.pig.eval.json.deserializers.JsonTuppleDeserializer;
 
-        return t;
+public class JsonTupleMap extends EvalFunc<Map<String, Object>> {
+
+    public static enum ERRORS {
+        JSONParseError, JSONMappingError, EOFError, GenericError
+    };
+
+    private static ObjectMapper jsonMapper = new ObjectMapper();
+    
+    static {
+        jsonMapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule("JsonTupleMap");
+        module.addDeserializer(Object.class, new JsonTuppleDeserializer());
+        jsonMapper.registerModule(module);
     }
 
-    /**
-     * Convert map and its values to types that Pig can handle
-     * 
-     * @param m
-     * @return
-     */
+
     @Override
-    @SuppressWarnings("unchecked")
-    protected Map<String, Object> makeSafe(Map<String, Object> m) {
-        Map<String, Object> safeValues = new HashMap<String, Object>();
-        for (Map.Entry<String, Object> entry : m.entrySet()) {
-            Object v = entry.getValue();
-            if (v != null && v instanceof List) {
-                // This is the main diff from the parent class
-                // in that it converts lists to 
-                Tuple t = convertListToTuple((List<Object>) v);
-                safeValues.put(entry.getKey(), t);
-            } else if (v != null && v instanceof Map) {
-                safeValues.put(entry.getKey(), makeSafe((Map<String, Object>) v));
-            } else {
-                safeValues.put(entry.getKey(), v);
-            }
+    public Map<String, Object> exec(Tuple input) throws IOException {
+        if (input == null || input.size() == 0) {
+            return null;
         }
 
-        return safeValues;
+        try {
+            return jsonMapper.readValue((String) input.get(0), new TypeReference<Map<String, Object>>() {});
+        } catch (JsonParseException e) {
+            warn("JSON Parse Error: " + e.getMessage(), ERRORS.JSONParseError);
+        } catch (JsonMappingException e) {
+            warn("JSON Mapping Error: " + e.getMessage(), ERRORS.JSONMappingError);
+        } catch (EOFException e) {
+            warn("Hit EOF unexpectedly", ERRORS.EOFError);
+        } catch (Exception e) {
+            warn("Generic error during JSON mapping", ERRORS.GenericError);
+        }
+
+        return null;
     }
 }

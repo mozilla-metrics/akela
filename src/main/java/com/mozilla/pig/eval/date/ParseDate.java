@@ -49,7 +49,7 @@ public class ParseDate extends EvalFunc<Long> {
 			Date d = sdf.parse((String)input.get(0));
 			t = d.getTime();
 		} catch (ParseException e) {
-			pigLogger.warn(this, "Date parsing error", ERRORS.DateParseError);
+			warn("Date parse error: " + e, ERRORS.DateParseError);
 		}
 		
 		return t;

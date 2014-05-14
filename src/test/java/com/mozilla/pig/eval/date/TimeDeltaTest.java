@@ -83,4 +83,27 @@ public class TimeDeltaTest {
         assertEquals(10, (long)deltaDays);
     }
     
+
+    @Test
+    public void testInvalidDateFormat() throws IOException, ParseException {
+    	Tuple input = tupleFactory.newTuple(2);
+        input.set(0, "dummy1");
+        input.set(1, "dummy2");
+        
+        TimeDelta daysAgo = new TimeDelta("5", TIME_FORMAT);
+        Long deltaDays = daysAgo.exec(input);
+        assertNull(deltaDays);
+    }
+
+    @Test
+    public void testInvalidDateType() throws IOException, ParseException {
+    	Tuple input = tupleFactory.newTuple(2);
+        input.set(0, new Integer(0));
+        input.set(1, new Float(0));
+        
+        TimeDelta daysAgo = new TimeDelta("5", TIME_FORMAT);
+        Long deltaDays = daysAgo.exec(input);
+        assertNull(deltaDays);
+    }
+
 }
