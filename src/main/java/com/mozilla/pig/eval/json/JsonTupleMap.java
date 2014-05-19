@@ -39,6 +39,8 @@ public class JsonTupleMap extends JsonMap {
         for (Object o : l) {
             if (o instanceof List) {
                 t.append(convertListToTuple((List<Object>) o));
+            } else if (o instanceof Map) {
+                t.append(makeSafe((Map<String, Object>) o));
             } else {
                 t.append(o);
             }
