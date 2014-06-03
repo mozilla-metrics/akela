@@ -58,6 +58,22 @@ public class JsonTupleMapTest {
         }
     }
 
+    @Test
+    public void testExecTupleInsideMapInsideTuple() throws IOException {
+        Tuple input = tupleFactory.newTuple();
+        input.append("{\"stacks\":[4,{\"field1\": [1,2,3]}, 1]}");
+        Map<String,Object> myMap = jsonMap.exec(input);
+        assertEquals(myMap.get("stacks") instanceof Tuple, true);
+        Tuple stacks = (Tuple)myMap.get("stacks");
+        assertEquals(stacks.get(1) instanceof Map, true);
+        Map<String,Object> innerMap = (Map<String,Object>)stacks.get(1);
+        assertEquals(innerMap.get("field1") instanceof Tuple, true);
+        Tuple innerTuple = (Tuple)innerMap.get("field1");
+        assertEquals(innerTuple.get(0), 1);
+        assertEquals(innerTuple.get(1), 2);
+        assertEquals(innerTuple.get(2), 3);
+    }
+
     // Construct a tuple that represents this json:
     //   {"stacks":[[[4,3],[2,1]], [[1,2],[3,4]]]}
     public Tuple getTestTuple() {
