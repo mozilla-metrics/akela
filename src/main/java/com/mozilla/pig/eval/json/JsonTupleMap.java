@@ -34,19 +34,23 @@ public class JsonTupleMap extends JsonMap {
      * @return
      */
     @SuppressWarnings("unchecked")
-    private Tuple convertListToTuple(List<Object> l) {
-        Tuple t = tupleFactory.newTuple();
+    private Tuple makeSafeList(List<Object> l) {
+        Tuple safeValues = tupleFactory.newTuple();
         for (Object o : l) {
-            if (o instanceof List) {
-                t.append(convertListToTuple((List<Object>) o));
-            } else if (o instanceof Map) {
-                t.append(makeSafe((Map<String, Object>) o));
-            } else {
-                t.append(o);
-            }
+            safeValues.append(makeSafeObj(o));
         }
+        return safeValues;
+    }
 
-        return t;
+    @SuppressWarnings("unchecked")
+    private Object makeSafeObj(Object o) {
+        if (o instanceof List) {
+            return makeSafeList((List<Object>) o);
+        } else if (o instanceof Map) {
+            return makeSafe((Map<String, Object>) o);
+        } else {
+            return o;
+        }
     }
 
     /**
@@ -60,19 +64,8 @@ public class JsonTupleMap extends JsonMap {
     protected Map<String, Object> makeSafe(Map<String, Object> m) {
         Map<String, Object> safeValues = new HashMap<String, Object>();
         for (Map.Entry<String, Object> entry : m.entrySet()) {
-            Object v = entry.getValue();
-            if (v != null && v instanceof List) {
-                // This is the main diff from the parent class
-                // in that it converts lists to 
-                Tuple t = convertListToTuple((List<Object>) v);
-                safeValues.put(entry.getKey(), t);
-            } else if (v != null && v instanceof Map) {
-                safeValues.put(entry.getKey(), makeSafe((Map<String, Object>) v));
-            } else {
-                safeValues.put(entry.getKey(), v);
-            }
+            safeValues.put(entry.getKey(), makeSafeObj(entry.getValue()));
         }
-
         return safeValues;
     }
 }
